@@ -1,13 +1,16 @@
 import { useCallback } from 'react';
+import { Star } from 'lucide-react';
 import type { JournalEntry } from '../../types';
 import { EntryTypeBadge } from './EntryTypeBadge';
 import { PriorityDot } from '../shared/PriorityDot';
-import { putEntry } from '../../lib/db/entries';
+import { putEntry, toggleStar } from '../../lib/db/entries';
 
 interface EntryCardProps {
   entry: JournalEntry;
   onClick: (entry: JournalEntry) => void;
   onUpdate?: (entry: JournalEntry) => void;
+  /** Highlight substring for keyword search */
+  highlight?: string;
 }
 
 function formatTime(ts: number): string {
@@ -19,7 +22,16 @@ function truncate(text: string, max = 120): string {
   return plain.length > max ? plain.slice(0, max).trimEnd() + '…' : plain;
 }
 
-export function EntryCard({ entry, onClick, onUpdate }: EntryCardProps) {
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part) ? <mark key={i} className="bg-warning/30 text-foreground rounded-sm">{part}</mark> : part
+  );
+}
+
+export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProps) {
   const handleTaskToggle = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -29,6 +41,18 @@ export function EntryCard({ entry, onClick, onUpdate }: EntryCardProps) {
     },
     [entry, onUpdate]
   );
+
+  const handleStarToggle = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const updated = await toggleStar(entry);
+      onUpdate?.(updated);
+      window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
+    },
+    [entry, onUpdate]
+  );
+
+  const preview = truncate(entry.raw_text);
 
   return (
     <div
@@ -54,6 +78,16 @@ export function EntryCard({ entry, onClick, onUpdate }: EntryCardProps) {
           <span className="text-xs text-muted-foreground truncate">{entry.project}</span>
         )}
         <PriorityDot priority={entry.priority} />
+        <button
+          onClick={handleStarToggle}
+          className={[
+            'ml-auto shrink-0 transition-colors',
+            entry.starred ? 'text-warning' : 'text-muted-foreground hover:text-warning',
+          ].join(' ')}
+          aria-label={entry.starred ? 'Unstar' : 'Star'}
+        >
+          <Star size={14} fill={entry.starred ? 'currentColor' : 'none'} />
+        </button>
       </div>
 
       <p
@@ -62,16 +96,16 @@ export function EntryCard({ entry, onClick, onUpdate }: EntryCardProps) {
           entry.is_done ? 'line-through opacity-50' : '',
         ].join(' ')}
       >
-        {truncate(entry.raw_text)}
+        {highlight ? highlightText(preview, highlight) : preview}
       </p>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>{formatTime(entry.created_at)}</span>
+        {entry.duration_minutes != null && (
+          <><span>·</span><span>{entry.duration_minutes}m</span></>
+        )}
         {entry.tags.length > 0 && (
-          <>
-            <span>·</span>
-            <span>{entry.tags.map((t) => `#${t}`).join(' ')}</span>
-          </>
+          <><span>·</span><span>{entry.tags.map((t) => `#${t}`).join(' ')}</span></>
         )}
       </div>
     </div>

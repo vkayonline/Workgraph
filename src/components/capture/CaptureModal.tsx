@@ -18,6 +18,7 @@ export function CaptureModal({ open, onClose }: CaptureModalProps) {
   const [text, setText] = useState('');
   const [images, setImages] = useState<EntryImage[]>([]);
   const [selectedType, setSelectedType] = useState<EntryType | null>(null);
+  const [duration, setDuration] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { submit, loading } = useCapture();
@@ -29,6 +30,7 @@ export function CaptureModal({ open, onClose }: CaptureModalProps) {
       setText('');
       setImages([]);
       setSelectedType(null);
+      setDuration('');
     }
   }, [open]);
 
@@ -63,7 +65,12 @@ export function CaptureModal({ open, onClose }: CaptureModalProps) {
 
   async function handleSubmit() {
     if (!text.trim() && images.length === 0) return;
-    await submit({ text, images, hintType: selectedType ?? undefined });
+    const durationMin = duration.trim() ? parseInt(duration, 10) : undefined;
+    await submit({
+      text, images,
+      hintType: selectedType ?? undefined,
+      durationMinutes: durationMin && !isNaN(durationMin) ? durationMin : undefined,
+    });
     onClose();
   }
 
@@ -108,6 +115,20 @@ export function CaptureModal({ open, onClose }: CaptureModalProps) {
             {images.map((img) => (
               <ImagePreview key={img.id} image={img} onRemove={removeImage} />
             ))}
+          </div>
+        )}
+
+        {(selectedType === 'work_log' || (!selectedType && true)) && selectedType === 'work_log' && (
+          <div className="flex items-center gap-2 mt-3">
+            <label className="text-xs text-muted-foreground shrink-0">Duration (min)</label>
+            <input
+              type="number"
+              min="0"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              placeholder="e.g. 60"
+              className="w-24 px-2 py-1 text-sm border border-input rounded-md bg-background text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0"
+            />
           </div>
         )}
 

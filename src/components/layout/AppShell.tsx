@@ -8,7 +8,7 @@ import { CaptureModal } from '../capture/CaptureModal';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { FOCUS_CHAT_INPUT_EVENT } from '../chat/ChatPage';
 
-const NAV_ROUTES = ['/', '/entries', '/decisions', '/chat'] as const;
+const NAV_ROUTES = ['/', '/entries', '/decisions', '/chat', '/calendar', '/graph', '/insights'] as const;
 
 function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(
@@ -47,7 +47,7 @@ export function AppShell() {
     const handler = (e: KeyboardEvent) => {
       if (!e.metaKey && !e.ctrlKey) return;
       if (isInputFocused()) return;
-      const idx = ['1', '2', '3', '4'].indexOf(e.key);
+      const idx = ['1', '2', '3', '4', '5', '6', '7'].indexOf(e.key);
       if (idx === -1) return;
       e.preventDefault();
       navigate(NAV_ROUTES[idx]);

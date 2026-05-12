@@ -1,5 +1,5 @@
 import { getClient } from './client';
-import { chatSystemPrompt } from './prompts';
+import { chatSystemPrompt, weeklyReviewPrompt } from './prompts';
 import type { JournalEntry, UserProfile } from '../../types';
 
 interface ChatOptions {
@@ -46,6 +46,58 @@ export async function streamChatTurn({
     max_tokens: 1024,
     stream: true,
     messages,
+  });
+
+  let full = '';
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) {
+      onToken(delta);
+      full += delta;
+    }
+  }
+  return full;
+}
+
+interface WeeklyReviewOptions {
+  entries: JournalEntry[];
+  startDate: string;
+  endDate: string;
+  profile: UserProfile;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  onToken: (token: string) => void;
+}
+
+export async function streamWeeklyReview({
+  entries,
+  startDate,
+  endDate,
+  profile,
+  apiKey,
+  baseUrl,
+  model,
+  onToken,
+}: WeeklyReviewOptions): Promise<string> {
+  const client = getClient(apiKey, baseUrl);
+  const context = entries
+    .map((e) => {
+      const date = new Date(e.created_at).toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      });
+      return `[${e.entry_type}] ${date}${e.project ? ` · ${e.project}` : ''}\n${e.raw_text}`;
+    })
+    .join('\n\n---\n\n');
+
+  const stream = await client.chat.completions.create({
+    model,
+    max_tokens: 800,
+    stream: true,
+    messages: [
+      { role: 'system', content: weeklyReviewPrompt(profile, startDate, endDate) },
+      { role: 'user', content: `Here are the journal entries:\n\n${context}` },
+    ],
   });
 
   let full = '';

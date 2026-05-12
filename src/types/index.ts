@@ -42,6 +42,7 @@ export interface JournalEntry {
   is_done: boolean;
   duration_minutes: number | null;
   starred: boolean;
+  links: string[];                   // IDs of manually linked entries
   embedding_vector: number[] | null;
 }
 

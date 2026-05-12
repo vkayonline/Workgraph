@@ -10,6 +10,7 @@ interface CaptureInput {
   text: string;
   images: EntryImage[];
   hintType?: EntryType;
+  durationMinutes?: number;
 }
 
 export function useCapture() {
@@ -17,7 +18,7 @@ export function useCapture() {
   const online = useNetworkStatus();
   const [loading, setLoading] = useState(false);
 
-  const submit = useCallback(async ({ text, images, hintType }: CaptureInput) => {
+  const submit = useCallback(async ({ text, images, hintType, durationMinutes }: CaptureInput) => {
     setLoading(true);
     const id = crypto.randomUUID();
     const now = Date.now();
@@ -34,8 +35,9 @@ export function useCapture() {
       priority: 'medium',
       sentiment: 'neutral',
       is_done: false,
-      duration_minutes: null,
+      duration_minutes: durationMinutes ?? null,
       starred: false,
+      links: [],
       embedding_vector: null,
     };
 

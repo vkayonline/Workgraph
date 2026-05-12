@@ -8,6 +8,9 @@ import { EntryListPage } from './components/entries/EntryListPage';
 import { DecisionsPage } from './components/decisions/DecisionsPage';
 import { ChatPage } from './components/chat/ChatPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { CalendarPage } from './components/calendar/CalendarPage';
+import { GraphPage } from './components/graph/GraphPage';
+import { InsightsPage } from './components/insights/InsightsPage';
 
 function AppRoutes() {
   const { onboarded } = useSettingsContext();
@@ -19,6 +22,9 @@ function AppRoutes() {
         <Route path="entries" element={<EntryListPage />} />
         <Route path="decisions" element={<DecisionsPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="graph" element={<GraphPage />} />
+        <Route path="insights" element={<InsightsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, FileText, Scale, MessageSquare, Settings, Plus } from 'lucide-react';
+import { Home, FileText, Scale, MessageSquare, Settings, Plus, Calendar, Share2, BarChart2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -13,6 +13,9 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/entries',   label: 'Entries',   Icon: FileText },
   { to: '/decisions', label: 'Decisions', Icon: Scale },
   { to: '/chat',      label: 'Chat',      Icon: MessageSquare },
+  { to: '/calendar',  label: 'Calendar',  Icon: Calendar },
+  { to: '/graph',     label: 'Graph',     Icon: Share2 },
+  { to: '/insights',  label: 'Insights',  Icon: BarChart2 },
 ];
 
 interface SidebarProps {

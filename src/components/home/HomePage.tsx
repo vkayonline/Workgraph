@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Flame } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { getTodayEntries, getPendingTasks, getOpenBlockers } from '../../lib/db/entries';
+import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { EntryCard } from '../entries/EntryCard';
 import { EntryDetail } from '../entries/EntryDetail';
 import { EmptyState } from '../shared/EmptyState';
@@ -22,6 +24,7 @@ function todayLabel(): string {
 
 export function HomePage() {
   const { settings } = useSettingsContext();
+  const { currentStreak, longestStreak, entriesThisWeek } = useDashboardStats();
   const [todayEntries, setTodayEntries] = useState<JournalEntry[]>([]);
   const [tasks, setTasks] = useState<JournalEntry[]>([]);
   const [blockers, setBlockers] = useState<JournalEntry[]>([]);
@@ -65,12 +68,34 @@ export function HomePage() {
   return (
     <>
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
-      <div>
-        <p className="text-muted-foreground text-sm">{todayLabel()}</p>
-        <h1 className="text-2xl font-semibold text-foreground mt-0.5">
-          {greeting(settings.userProfile.name)}
-        </h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-muted-foreground text-sm">{todayLabel()}</p>
+          <h1 className="text-2xl font-semibold text-foreground mt-0.5">
+            {greeting(settings.userProfile.name)}
+          </h1>
+        </div>
+        {currentStreak > 0 && (
+          <div className="flex flex-col items-end shrink-0">
+            <div className="flex items-center gap-1 text-warning font-semibold text-lg">
+              <Flame size={18} />
+              {currentStreak}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {currentStreak === 1 ? '1 day streak' : `${currentStreak} day streak`}
+            </p>
+            {longestStreak > currentStreak && (
+              <p className="text-xs text-muted-foreground">best: {longestStreak}</p>
+            )}
+          </div>
+        )}
       </div>
+
+      {entriesThisWeek > 0 && (
+        <p className="text-xs text-muted-foreground -mt-4">
+          {entriesThisWeek} {entriesThisWeek === 1 ? 'entry' : 'entries'} this week
+        </p>
+      )}
 
       {tasks.length > 0 && (
         <section>
