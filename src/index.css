@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+/* Class-based dark mode — toggled by adding .dark to <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ── Surfaces ── */
+  --color-background: #ffffff;
+  --color-foreground: #09090b;
+  --color-card: #ffffff;
+  --color-card-foreground: #09090b;
+  --color-faint: #fafafa;
+  --color-faint-foreground: #a1a1aa;
+
+  /* ── Brand ── */
+  --color-primary: #574747;
+  --color-primary-foreground: #fafafa;
+
+  /* ── Neutral layers ── */
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #574747;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #574747;
+
+  /* ── Semantic ── */
+  --color-danger: #d32f2f;
+  --color-danger-foreground: #fafafa;
+  --color-success: #008032;
+  --color-success-foreground: #fafafa;
+  --color-warning: #a65b00;
+  --color-warning-foreground: #09090b;
+
+  /* ── Chrome ── */
+  --color-border: #d4d4d8;
+  --color-input: #d4d4d8;
+  --color-ring: #574747;
+
+  /* ── Entry type colors ── */
+  --color-type-work-log: #6366f1;
+  --color-type-decision: #d97706;
+  --color-type-problem: #dc2626;
+  --color-type-solution: #16a34a;
+  --color-type-meeting: #2563eb;
+  --color-type-task: #7c3aed;
+  --color-type-learning: #0891b2;
+  --color-type-blocker: #b91c1c;
+  --color-type-risk: #ea580c;
+
+  /* ── Priority colors ── */
+  --color-priority-low: #16a34a;
+  --color-priority-medium: #d97706;
+  --color-priority-high: #ea580c;
+  --color-priority-critical: #dc2626;
+
+  /* ── Border radius (overrides Tailwind defaults) ── */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows (overrides Tailwind defaults) ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  /* ── Typography ── */
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+
+/* ── Dark mode token overrides ── */
+.dark {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-card: #18181b;
+  --color-card-foreground: #fafafa;
+  --color-faint: #1e1e21;
+  --color-faint-foreground: #71717a;
+  --color-primary: #fafafa;
+  --color-primary-foreground: #18181b;
+  --color-secondary: #27272a;
+  --color-secondary-foreground: #fafafa;
+  --color-muted: #27272a;
+  --color-muted-foreground: #a1a1aa;
+  --color-accent: #27272a;
+  --color-accent-foreground: #fafafa;
+  --color-danger: #f4807b;
+  --color-danger-foreground: #18181b;
+  --color-success: #6cc070;
+  --color-success-foreground: #18181b;
+  --color-warning: #f0a030;
+  --color-warning-foreground: #09090b;
+  --color-border: #3f3f46;
+  --color-input: #3f3f46;
+  --color-ring: #d4d4d8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Base ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    color-mix(in srgb, var(--color-muted) 15%, white) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ── Capture modal pop-in ── */
+.animate-pop-in {
+  transition: opacity 150ms, transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  @starting-style {
+    opacity: 0;
+    transform: perspective(1000px) rotateX(-15deg) translateZ(-80px);
+  }
+}
+
+/* ── Entry detail slide-in ── */
+.animate-slide-in {
+  transition: opacity 150ms, transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  @starting-style {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ── Token streaming cursor ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.stream-cursor::after {
+  content: '▋';
+  animation: blink 800ms infinite;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
