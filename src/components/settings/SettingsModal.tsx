@@ -312,15 +312,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                     <Button
                       variant="secondary"
                       className="w-full mt-2 font-bold"
-                      onClick={async () => {
-                        const json = await exportToJSON();
-                        const blob = new Blob([json], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `workgraph-export-${new Date().toISOString().split('T')[0]}.json`;
-                        a.click();
-                      }}
+                      onClick={() => exportToJSON()}
                     >
                       Download JSON
                     </Button>
@@ -351,11 +343,10 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                         const file = e.target.files?.[0];
                         if (!file) return;
                         try {
-                          const text = await file.text();
-                          await importFromJSON(text);
+                          await importFromJSON(file);
                           alert('Import successful!');
                           window.location.reload();
-                        } catch (err) {
+                        } catch {
                           setError('Failed to import data. Ensure the file is a valid WorkGraph export.');
                         }
                       }}

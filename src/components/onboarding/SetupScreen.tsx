@@ -1,5 +1,5 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import { Hexagon, Globe, Key, User, Monitor, Cpu, RefreshCw, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { Globe, Key, User, Monitor, Cpu, RefreshCw, ChevronLeft } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { Button } from '../shared/Button';
 import { ErrorBanner } from '../shared/ErrorBanner';
@@ -26,14 +26,7 @@ export function SetupScreen() {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto-load models when provider info is likely complete
-  useEffect(() => {
-    if (step === 2 && apiKey.trim() && baseUrl.trim() && availableModels.length === 0) {
-      loadModels();
-    }
-  }, [step]);
-
-  async function loadModels() {
+  const loadModels = useCallback(async () => {
     if (!apiKey.trim() || !baseUrl.trim()) return;
     
     setIsLoadingModels(true);
@@ -46,13 +39,20 @@ export function SetupScreen() {
           setModel(models[0].id);
         }
       }
-    } catch (err) {
+    } catch {
       // Soft handle: show error but don't block
       setError('Could not reach provider to load models. Please check your credentials.');
     } finally {
       setIsLoadingModels(false);
     }
-  }
+  }, [apiKey, baseUrl, model]);
+
+  // Auto-load models when provider info is likely complete
+  useEffect(() => {
+    if (step === 2 && apiKey.trim() && baseUrl.trim() && availableModels.length === 0) {
+      loadModels();
+    }
+  }, [step, apiKey, baseUrl, availableModels.length, loadModels]);
 
   function handleNext(e: FormEvent) {
     e.preventDefault();
@@ -241,4 +241,3 @@ export function SetupScreen() {
     </div>
   );
 }
-

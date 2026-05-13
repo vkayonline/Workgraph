@@ -65,7 +65,7 @@ export function ChatPage() {
 
     try {
       const allEntries = await JournalRepository.getAll();
-      const relevant = await pickRelevant(allEntries, question, settings);
+      const relevant = await pickRelevant(allEntries, question);
 
       // Attach citations immediately so they appear as soon as streaming starts
       if (relevant.length > 0) {
@@ -218,7 +218,6 @@ export function ChatPage() {
 async function pickRelevant(
   entries: JournalEntry[],
   question: string,
-  settings: ReturnType<typeof import('../../contexts/SettingsContext').useSettingsContext>['settings'],
 ): Promise<JournalEntry[]> {
   const embeddedEntries = entries.filter((e) => e.embedding_vector !== null);
   const q = question.toLowerCase().trim();

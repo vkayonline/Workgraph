@@ -21,9 +21,9 @@ function truncate(text: string, max = 120): string {
   // Strip common markdown for preview
   const plain = text
     .replace(/#{1,6}\s?/g, '')
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Links
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
     .replace(/[*_`]/g, '')
-    .replace(/!\[[^\]]*\]\([^\)]+\)/g, '') // Images
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // Images
     .replace(/^\s*[-*+]\s+/gm, '') // Bullets
     .replace(/^\s*\d+\.\s+/gm, '') // Numbered lists
     .trim();

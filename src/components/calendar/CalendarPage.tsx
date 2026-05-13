@@ -67,7 +67,7 @@ export function CalendarPage() {
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
-  const todayStr = isoDate(Date.now());
+  const todayStr = useMemo(() => isoDate(Date.now()), []);
 
   function prevMonth() {
     if (month === 0) { setYear((y) => y - 1); setMonth(11); }

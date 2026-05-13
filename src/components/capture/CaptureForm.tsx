@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Paperclip, Send } from 'lucide-react';
-import { Button } from '../shared/Button';
+import { Paperclip } from 'lucide-react';
 import { Spinner } from '../shared/Spinner';
 import { useCapture } from '../../hooks/useCapture';
 import { TemplatePicker } from './TemplatePicker';

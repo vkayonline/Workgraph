@@ -9,10 +9,9 @@ import type { JournalEntry } from '../../types';
 
 type RangePreset = '7d' | '30d' | '90d' | 'custom';
 
-function rangeFromPreset(preset: Exclude<RangePreset, 'custom'>): { from: number; to: number } {
-  const to = Date.now();
+function rangeFromPreset(preset: Exclude<RangePreset, 'custom'>, now: number): { from: number; to: number } {
   const days = preset === '7d' ? 7 : preset === '30d' ? 30 : 90;
-  return { from: to - days * 86400000, to };
+  return { from: now - days * 86400000, to: now };
 }
 
 function toIsoDate(ts: number): string {
@@ -26,6 +25,8 @@ export function InsightsPage() {
   const [customTo, setCustomTo] = useState('');
   const [entries, setEntries] = useState<JournalEntry[]>([]);
 
+  const baseNow = useMemo(() => Date.now(), []);
+
   const { from, to } = useMemo(() => {
     if (preset === 'custom' && customFrom && customTo) {
       return {
@@ -33,9 +34,9 @@ export function InsightsPage() {
         to: new Date(customTo + 'T23:59:59').getTime(),
       };
     }
-    if (preset !== 'custom') return rangeFromPreset(preset);
-    return { from: Date.now() - 30 * 86400000, to: Date.now() };
-  }, [preset, customFrom, customTo]);
+    if (preset !== 'custom') return rangeFromPreset(preset, baseNow);
+    return { from: baseNow - 30 * 86400000, to: baseNow };
+  }, [preset, customFrom, customTo, baseNow]);
 
   const load = useCallback(async () => {
     const data = await JournalRepository.getRange(from, to);

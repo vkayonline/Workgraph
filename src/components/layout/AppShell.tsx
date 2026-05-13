@@ -63,7 +63,7 @@ export function AppShell() {
     <div className="flex h-dvh overflow-hidden bg-background">
       {isDesktop ? (
         <>
-          <Sidebar onCapture={() => setCaptureOpen(true)} />
+          <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
             <TopBar 
               onCapture={() => setCaptureOpen(true)} 

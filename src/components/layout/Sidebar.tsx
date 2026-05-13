@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Hexagon, Settings, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface NavItem {
   to: string;
@@ -41,11 +41,7 @@ function NavItemLink({ to, emoji, label, collapsed }: NavItem & { collapsed: boo
   );
 }
 
-interface SidebarProps {
-  onCapture: () => void;
-}
-
-export function Sidebar({ onCapture }: SidebarProps) {
+export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
 

@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Star } from 'lucide-react';
 import { useEntries } from '../../hooks/useEntries';
 import { EntryCard } from './EntryCard';
 import { EntryDetail } from './EntryDetail';
 import { EmptyState } from '../shared/EmptyState';
 import { SkeletonCard } from '../shared/Skeleton';
-import { JournalRepository, DATA_EVENTS } from '../../lib/db/repository';
+import { DATA_EVENTS } from '../../lib/db/repository';
 import type { EntryType, JournalEntry } from '../../types';
 import { ENTRY_TYPES } from '../../types';
 

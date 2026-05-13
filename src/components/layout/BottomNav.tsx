@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Home, FileText, MessageSquare, Plus, MoreHorizontal,
-  Scale, Calendar, GitBranch, AreaChart, Settings
+  Scale, Calendar, AreaChart, Settings
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 

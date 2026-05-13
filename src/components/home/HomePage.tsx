@@ -25,7 +25,7 @@ function todayLabel(): string {
 
 export function HomePage() {
   const { settings } = useSettingsContext();
-  const { currentStreak, longestStreak, entriesThisWeek } = useDashboardStats();
+  const { currentStreak, entriesThisWeek } = useDashboardStats();
   const [todayEntries, setTodayEntries] = useState<JournalEntry[]>([]);
   const [tasks, setTasks] = useState<JournalEntry[]>([]);
   const [issues, setIssues] = useState<JournalEntry[]>([]);

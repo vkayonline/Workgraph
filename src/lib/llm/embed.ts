@@ -1,5 +1,3 @@
-import { getClient } from './client';
-
 let pipelineInstance: any = null;
 
 async function getLocalPipeline() {
