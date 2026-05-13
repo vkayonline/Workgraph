@@ -10,13 +10,13 @@ A privacy-first, single-user, local-first PWA work journal. Capture thoughts in 
 Capture thought → LLM auto-tags it → stored in IndexedDB → query it via chat
 ```
 
-Your journal entries are classified automatically using the Anthropic Claude API. You bring your own API key — it never leaves your device.
+Your journal entries are classified automatically using an OpenAI-compatible API. You bring your own API key — it never leaves your device.
 
 ## Features
 
 - **Quick capture** — Cmd+K from anywhere. Text + images. 4 templates (Meeting, Decision, Blocker, Weekly Goal)
-- **Auto-classification** — entry type, tags, project, priority, sentiment — all inferred by Claude
-- **Personalized** — tells Claude your name and what you do day to day; every prompt is tailored to you
+- **Auto-classification** — entry type, tags, project, priority, sentiment — all inferred by the LLM
+- **Personalized** — tells the LLM your name and what you do day to day; every prompt is tailored to you
 - **Conversational query** — ask questions about your journal, get cited answers
 - **Today view** — pending tasks, open blockers, today's feed at a glance
 - **Decisions log** — searchable, grouped by month
@@ -33,14 +33,14 @@ Your journal entries are classified automatically using the Anthropic Claude API
 | TypeScript 6 | Language |
 | Tailwind CSS v4 | Styling (CSS-native config) |
 | IndexedDB (`idb`) | Storage |
-| Anthropic Claude API | Classification + chat |
-| `@xenova/transformers` | Local embeddings (planned) |
+| OpenAI-compatible API | Classification + chat |
+| `@xenova/transformers` | Local embeddings fallback |
 | `lucide-react` | Icons |
 | `react-router-dom` v7 | Routing |
 
 ## Getting started
 
-**Prerequisites:** Node.js 20+, pnpm, an [Anthropic API key](https://console.anthropic.com/)
+**Prerequisites:** Node.js 20+, pnpm, an OpenAI-compatible API key (e.g. from OpenAI, OpenRouter, Groq, or Ollama)
 
 ```bash
 git clone https://github.com/your-username/workgraph
@@ -62,7 +62,7 @@ pnpm lint     # eslint
 
 ## Privacy
 
-- API key stored in `localStorage` — never sent anywhere except directly to `api.anthropic.com`
+- API key stored in `localStorage` — never sent anywhere except directly to your configured API endpoint.
 - All entries stored in IndexedDB in your browser
 - No telemetry, no analytics, no accounts
 - JSON export gives you a full portable copy of your data

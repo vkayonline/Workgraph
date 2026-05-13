@@ -4,7 +4,8 @@ import ReactMarkdown from 'react-markdown';
 import { EntryTypeBadge } from './EntryTypeBadge';
 import { PriorityDot } from '../shared/PriorityDot';
 import { Button } from '../shared/Button';
-import { putEntry, deleteEntry, toggleStar, getEntry, getBacklinks, searchEntries } from '../../lib/db/entries';
+import { getEntry, getBacklinks, searchEntries } from '../../lib/db/entries';
+import { JournalRepository } from '../../lib/db/repository';
 import type { JournalEntry } from '../../types';
 
 interface EntryDetailProps {
@@ -74,7 +75,7 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
       duration_minutes: duration && !isNaN(duration) ? duration : null,
       timestamp: Date.now(),
     };
-    await putEntry(updated);
+    await JournalRepository.save(updated);
     onUpdate(updated);
     setEditing(false);
     setSaving(false);
@@ -82,27 +83,26 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
 
   async function handleDelete() {
     if (!confirm('Delete this entry?')) return;
-    await deleteEntry(entry.id);
+    await JournalRepository.delete(entry.id);
     onDelete(entry.id);
     onClose();
   }
 
   async function handleTaskToggle() {
     const updated = { ...entry, is_done: !entry.is_done, timestamp: Date.now() };
-    await putEntry(updated);
+    await JournalRepository.save(updated);
     onUpdate(updated);
   }
 
   async function handleStarToggle() {
-    const updated = await toggleStar(entry);
+    const updated = await JournalRepository.toggleStar(entry);
     onUpdate(updated);
-    window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
   }
 
   async function handleAddLink(target: JournalEntry) {
     if (entry.links?.includes(target.id)) return;
     const updated = { ...entry, links: [...(entry.links ?? []), target.id] };
-    await putEntry(updated);
+    await JournalRepository.save(updated);
     onUpdate(updated);
     setLinkedEntries((prev) => [...prev, target]);
     setLinkQuery('');
@@ -111,7 +111,7 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
 
   async function handleRemoveLink(targetId: string) {
     const updated = { ...entry, links: (entry.links ?? []).filter((id) => id !== targetId) };
-    await putEntry(updated);
+    await JournalRepository.save(updated);
     onUpdate(updated);
     setLinkedEntries((prev) => prev.filter((e) => e.id !== targetId));
   }
@@ -148,14 +148,14 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
               ].join(' ')}
               aria-label={entry.starred ? 'Unstar' : 'Star'}
             >
-              <Star size={16} fill={entry.starred ? 'currentColor' : 'none'} />
+              <Star size={14} fill={entry.starred ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={onClose}
               className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
               aria-label="Close"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -181,7 +181,7 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
                 onChange={(e) => setEditText(e.target.value)}
                 autoFocus
                 rows={10}
-                className="w-full text-sm bg-background border border-input rounded-md p-3 text-foreground resize-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0"
+                className="w-full text-sm bg-background border border-input rounded-md p-3 text-foreground resize-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0 font-mono"
               />
               {entry.entry_type === 'work_log' && (
                 <div className="flex items-center gap-2">

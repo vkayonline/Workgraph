@@ -3,7 +3,7 @@ import { Star } from 'lucide-react';
 import type { JournalEntry } from '../../types';
 import { EntryTypeBadge } from './EntryTypeBadge';
 import { PriorityDot } from '../shared/PriorityDot';
-import { putEntry, toggleStar } from '../../lib/db/entries';
+import { JournalRepository } from '../../lib/db/repository';
 
 interface EntryCardProps {
   entry: JournalEntry;
@@ -18,7 +18,15 @@ function formatTime(ts: number): string {
 }
 
 function truncate(text: string, max = 120): string {
-  const plain = text.replace(/#{1,6}\s?/g, '').replace(/[*_`]/g, '');
+  // Strip common markdown for preview
+  const plain = text
+    .replace(/#{1,6}\s?/g, '')
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Links
+    .replace(/[*_`]/g, '')
+    .replace(/!\[[^\]]*\]\([^\)]+\)/g, '') // Images
+    .replace(/^\s*[-*+]\s+/gm, '') // Bullets
+    .replace(/^\s*\d+\.\s+/gm, '') // Numbered lists
+    .trim();
   return plain.length > max ? plain.slice(0, max).trimEnd() + '…' : plain;
 }
 
@@ -36,7 +44,7 @@ export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProp
     async (e: React.MouseEvent) => {
       e.stopPropagation();
       const updated = { ...entry, is_done: !entry.is_done, timestamp: Date.now() };
-      await putEntry(updated);
+      await JournalRepository.save(updated);
       onUpdate?.(updated);
     },
     [entry, onUpdate]
@@ -45,9 +53,8 @@ export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProp
   const handleStarToggle = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      const updated = await toggleStar(entry);
+      const updated = await JournalRepository.toggleStar(entry);
       onUpdate?.(updated);
-      window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
     },
     [entry, onUpdate]
   );
@@ -92,15 +99,15 @@ export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProp
 
       <p
         className={[
-          'text-sm text-foreground mb-2 line-clamp-2',
+          'text-sm text-foreground mb-2 line-clamp-2 font-mono',
           entry.is_done ? 'line-through opacity-50' : '',
         ].join(' ')}
       >
         {highlight ? highlightText(preview, highlight) : preview}
       </p>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{formatTime(entry.created_at)}</span>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+        <span className="font-sans">{formatTime(entry.created_at)}</span>
         {entry.duration_minutes != null && (
           <><span>·</span><span>{entry.duration_minutes}m</span></>
         )}

@@ -1,4 +1,8 @@
 export function cosine(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    console.warn(`Vector dimension mismatch: ${a.length} vs ${b.length}. Scoring as zero.`);
+    return 0;
+  }
   let dot = 0, na = 0, nb = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];

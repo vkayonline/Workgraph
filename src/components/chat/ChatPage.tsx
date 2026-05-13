@@ -1,17 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
-import { getAllEntries } from '../../lib/db/entries';
+import { JournalRepository } from '../../lib/db/repository';
 import { streamChatTurn } from '../../lib/llm/chat';
 import { embedText } from '../../lib/llm/embed';
 import { topK } from '../../lib/search/cosine';
 import { Spinner } from '../shared/Spinner';
 import { ErrorBanner } from '../shared/ErrorBanner';
 import { SourceCitations } from './SourceCitations';
+import { EntryDetail } from '../entries/EntryDetail';
 import type { ChatMessage, JournalEntry } from '../../types';
 
 const EXAMPLES = [
-  'What blockers have I logged this week?',
+  'What issues have I logged this week?',
   'What decisions did I make last month?',
   'What am I currently working on?',
 ];
@@ -27,6 +28,7 @@ export function ChatPage() {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState('');
+  const [selected, setSelected] = useState<JournalEntry | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,7 +64,7 @@ export function ChatPage() {
     setStreaming(true);
 
     try {
-      const allEntries = await getAllEntries();
+      const allEntries = await JournalRepository.getAll();
       const relevant = await pickRelevant(allEntries, question, settings);
 
       // Attach citations immediately so they appear as soon as streaming starts
@@ -109,7 +111,18 @@ export function ChatPage() {
     }
   }
 
+  function handleUpdate(updated: JournalEntry) {
+    setSelected((prev) => prev?.id === updated.id ? updated : prev);
+    JournalRepository.save(updated);
+  }
+
+  function handleDelete(id: string) {
+    setSelected(null);
+    JournalRepository.delete(id);
+  }
+
   return (
+    <>
     <div className="max-w-2xl mx-auto flex flex-col gap-0" style={{ height: 'calc(100dvh - 8rem)' }}>
       <h1 className="text-xl font-semibold text-foreground mb-4 shrink-0">
         Chat with your journal
@@ -154,7 +167,7 @@ export function ChatPage() {
             </div>
             {msg.role === 'assistant' && citations.has(msg.id) && (
               <div className="max-w-[80%] w-full px-1">
-                <SourceCitations entries={citations.get(msg.id)!} />
+                <SourceCitations entries={citations.get(msg.id)!} onSelect={setSelected} />
               </div>
             )}
           </div>
@@ -177,7 +190,7 @@ export function ChatPage() {
           onKeyDown={handleKeyDown}
           placeholder="Ask anything… (Cmd+Enter to send)"
           rows={2}
-          className="flex-1 px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground resize-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0"
+          className="flex-1 px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground resize-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0 font-mono"
         />
         <button
           onClick={() => send(input)}
@@ -189,6 +202,16 @@ export function ChatPage() {
         </button>
       </div>
     </div>
+
+    {selected && (
+      <EntryDetail
+        entry={selected}
+        onClose={() => setSelected(null)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
+    )}
+    </>
   );
 }
 
@@ -198,26 +221,58 @@ async function pickRelevant(
   settings: ReturnType<typeof import('../../contexts/SettingsContext').useSettingsContext>['settings'],
 ): Promise<JournalEntry[]> {
   const embeddedEntries = entries.filter((e) => e.embedding_vector !== null);
+  const q = question.toLowerCase().trim();
+  const terms = q.split(/\s+/).filter(t => t.length > 2);
 
-  if (embeddedEntries.length >= 3 && settings.apiKey && settings.embeddingModel) {
+  let vectorResults: JournalEntry[] = [];
+  if (embeddedEntries.length >= 1 && settings.apiKey && settings.embeddingModel) {
     try {
-      const vector = await embedText(question, settings.apiKey, settings.baseUrl, settings.embeddingModel);
-      return topK(vector, entries, 8);
-    } catch {
-      // fall through to keyword scoring
+      const vector = await embedText(
+        question, 
+        settings.apiKey, 
+        settings.baseUrl, 
+        settings.embeddingModel,
+        settings.embeddingSource
+      );
+      vectorResults = topK(vector, embeddedEntries, 12);
+    } catch (err) {
+      console.warn('Semantic search failed, falling back to keywords:', err);
     }
   }
 
-  const q = question.toLowerCase();
-  return entries
-    .map((e) => {
-      let score = 0;
-      if (e.raw_text.toLowerCase().includes(q)) score += 3;
-      if (e.tags.some((t) => q.includes(t))) score += 2;
-      if (e.project?.toLowerCase() && q.includes(e.project.toLowerCase())) score += 2;
-      score += 1 / (1 + (Date.now() - e.created_at) / 86400000);
-      return { e, score };
-    })
+  // Keyword scoring
+  const scored = entries.map((e) => {
+    let score = 0;
+    const haystack = [
+      e.raw_text,
+      ...e.tags,
+      e.project ?? '',
+      e.entry_type.replace('_', ' '),
+    ].join(' ').toLowerCase();
+
+    // Direct phrase match
+    if (haystack.includes(q)) score += 10;
+
+    // Individual term matches
+    for (const term of terms) {
+      if (haystack.includes(term)) score += 2;
+    }
+
+    // Boost based on semantic rank if available
+    const vecRank = vectorResults.indexOf(e);
+    if (vecRank !== -1) {
+      score += (12 - vecRank) * 1.5;
+    }
+
+    // Recency boost (fades over ~30 days)
+    const ageDays = (Date.now() - e.created_at) / 86400000;
+    score += Math.max(0, 5 * (1 - ageDays / 30));
+
+    return { e, score };
+  });
+
+  return scored
+    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
     .map(({ e }) => e);

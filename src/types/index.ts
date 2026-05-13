@@ -1,22 +1,17 @@
 export const ENTRY_TYPES = [
   'work_log',
   'decision',
-  'problem',
+  'issue',
   'solution',
   'meeting_note',
   'task',
   'learning',
-  'blocker',
-  'risk',
 ] as const;
 
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
 export const PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
 export type Priority = (typeof PRIORITIES)[number];
-
-export const SENTIMENTS = ['positive', 'neutral', 'negative', 'mixed'] as const;
-export type Sentiment = (typeof SENTIMENTS)[number];
 
 export const THEMES = ['light', 'dark', 'system'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -28,6 +23,8 @@ export interface EntryImage {
   file_name: string;
 }
 
+export type AIStatus = 'pending' | 'processed' | 'failed';
+
 export interface JournalEntry {
   id: string;
   created_at: number;
@@ -38,12 +35,19 @@ export interface JournalEntry {
   tags: string[];
   project: string | null;
   priority: Priority;
-  sentiment: Sentiment;
   is_done: boolean;
   duration_minutes: number | null;
   starred: boolean;
   links: string[];                   // IDs of manually linked entries
   embedding_vector: number[] | null;
+  classification_status: AIStatus;
+  embedding_status: AIStatus;
+  processing_metadata?: {
+    classification_retries?: number;
+    embedding_retries?: number;
+    next_retry_at?: number;
+    error?: string;
+  };
 }
 
 export interface ClassificationResult {
@@ -51,7 +55,6 @@ export interface ClassificationResult {
   tags: string[];
   project: string | null;
   priority: Priority;
-  sentiment: Sentiment;
 }
 
 export interface UserProfile {
@@ -65,6 +68,7 @@ export interface Settings {
   baseUrl: string;
   model: string;
   embeddingModel: string;
+  embeddingSource: 'local' | 'api';
   theme: Theme;
   lastExportAt: number | null;
 }

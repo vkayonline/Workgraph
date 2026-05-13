@@ -1,14 +1,14 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { JournalEntry } from '../../types';
 
-const SENTIMENT_COLORS: Record<string, string> = {
-  positive: '#16a34a',
-  neutral:  '#6366f1',
-  negative: '#dc2626',
-  mixed:    '#d97706',
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: 'var(--color-priority-critical)',
+  high:     'var(--color-priority-high)',
+  medium:   'var(--color-priority-medium)',
+  low:      'var(--color-priority-low)',
 };
 
-interface SentimentChartProps {
+interface ImpactChartProps {
   entries: JournalEntry[];
 }
 
@@ -17,13 +17,13 @@ function toLocalDateStr(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function SentimentChart({ entries }: SentimentChartProps) {
+export function ImpactChart({ entries }: ImpactChartProps) {
   // Group by day
   const byDay = new Map<string, Record<string, number>>();
   for (const e of entries) {
     const day = toLocalDateStr(e.created_at);
-    if (!byDay.has(day)) byDay.set(day, { positive: 0, neutral: 0, negative: 0, mixed: 0 });
-    byDay.get(day)![e.sentiment] = (byDay.get(day)![e.sentiment] ?? 0) + 1;
+    if (!byDay.has(day)) byDay.set(day, { critical: 0, high: 0, medium: 0, low: 0 });
+    byDay.get(day)![e.priority] = (byDay.get(day)![e.priority] ?? 0) + 1;
   }
 
   const data = [...byDay.entries()]
@@ -39,7 +39,7 @@ export function SentimentChart({ entries }: SentimentChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+      <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
         <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--color-muted-fg)' }} />
         <YAxis tick={{ fontSize: 11, fill: 'var(--color-muted-fg)' }} allowDecimals={false} />
@@ -53,19 +53,16 @@ export function SentimentChart({ entries }: SentimentChartProps) {
           }}
         />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-        {(['positive', 'neutral', 'negative', 'mixed'] as const).map((s) => (
-          <Area
-            key={s}
-            type="monotone"
-            dataKey={s}
+        {(['critical', 'high', 'medium', 'low'] as const).map((p) => (
+          <Bar
+            key={p}
+            dataKey={p}
             stackId="1"
-            stroke={SENTIMENT_COLORS[s]}
-            fill={SENTIMENT_COLORS[s]}
-            fillOpacity={0.35}
-            strokeWidth={1.5}
+            fill={PRIORITY_COLORS[p]}
+            radius={[0, 0, 0, 0]}
           />
         ))}
-      </AreaChart>
+      </BarChart>
     </ResponsiveContainer>
   );
 }

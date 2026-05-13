@@ -4,13 +4,11 @@ import type { JournalEntry } from '../../types';
 const TYPE_COLORS: Record<string, string> = {
   work_log:     'var(--color-type-work-log)',
   decision:     'var(--color-type-decision)',
-  problem:      'var(--color-type-problem)',
+  issue:        'var(--color-type-issue)',
   solution:     'var(--color-type-solution)',
   meeting_note: 'var(--color-type-meeting)',
   task:         'var(--color-type-task)',
   learning:     'var(--color-type-learning)',
-  blocker:      'var(--color-type-blocker)',
-  risk:         'var(--color-type-risk)',
 };
 
 interface EntryTypeChartProps {

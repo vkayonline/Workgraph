@@ -9,14 +9,13 @@ export function classifySystemPrompt(
 Here is what ${profile.name} does day to day: ${profile.dayToDay}
 
 Classify the following journal entry. Return JSON only — no markdown, no explanation:
-{ "entry_type": string, "tags": string[], "project": string | null, "priority": string, "sentiment": string }
+{ "entry_type": string, "tags": string[], "project": string | null, "priority": string }
 
 ${existingProjects.length > 0 ? `${profile.name}'s existing projects (prefer these): ${existingProjects.join(', ')}` : ''}
 ${topTags.length > 0 ? `${profile.name}'s common tags (prefer these): ${topTags.join(', ')}` : ''}
 
-Entry types: work_log, decision, problem, solution, meeting_note, task, learning, blocker, risk
+Entry types: work_log, decision, issue, solution, meeting_note, task, learning
 Priority: low, medium, high, critical
-Sentiment: positive, neutral, negative, mixed
 
 Tags should be lowercase, no spaces (use hyphens). 2-5 tags max.`;
 }
@@ -49,7 +48,7 @@ Here is what ${profile.name} does day to day: ${profile.dayToDay}
 Based on entries from ${startDate} to ${endDate}, write a personal summary:
 1. What you accomplished
 2. Key decisions made
-3. Blockers (resolved or open)
+3. Issues (resolved or open)
 4. Things you learned
 5. What's still open
 

@@ -5,9 +5,10 @@ import type { JournalEntry } from '../../types';
 
 interface SourceCitationsProps {
   entries: JournalEntry[];
+  onSelect?: (entry: JournalEntry) => void;
 }
 
-export function SourceCitations({ entries }: SourceCitationsProps) {
+export function SourceCitations({ entries, onSelect }: SourceCitationsProps) {
   const [open, setOpen] = useState(false);
 
   if (entries.length === 0) return null;
@@ -32,22 +33,25 @@ export function SourceCitations({ entries }: SourceCitationsProps) {
             });
             const preview = e.raw_text.replace(/[#*_`>]/g, '').trim().slice(0, 80);
             return (
-              <li
-                key={e.id}
-                className="flex flex-col gap-0.5 px-2.5 py-2 rounded border border-border bg-faint text-xs"
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <EntryTypeBadge type={e.entry_type} />
-                  {e.project && (
-                    <span className="text-muted-foreground">{e.project}</span>
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect?.(e)}
+                  className="w-full flex flex-col gap-0.5 px-2.5 py-2 rounded border border-border bg-card text-xs text-left hover:border-primary transition-colors group"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <EntryTypeBadge type={e.entry_type} />
+                    {e.project && (
+                      <span className="text-muted-foreground">{e.project}</span>
+                    )}
+                    <span className="text-muted-foreground ml-auto">{date}</span>
+                  </div>
+                  {preview && (
+                    <p className="text-foreground leading-snug font-mono group-hover:text-primary transition-colors">
+                      {preview}{e.raw_text.length > 80 ? '…' : ''}
+                    </p>
                   )}
-                  <span className="text-muted-foreground ml-auto">{date}</span>
-                </div>
-                {preview && (
-                  <p className="text-foreground leading-snug">
-                    {preview}{e.raw_text.length > 80 ? '…' : ''}
-                  </p>
-                )}
+                </button>
               </li>
             );
           })}

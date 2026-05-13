@@ -1,9 +1,5 @@
 import { useState, useCallback } from 'react';
-import { putEntry, getExistingProjects, getTopTags } from '../lib/db/entries';
-import { classifyEntry } from '../lib/llm/classify';
-import { embedText } from '../lib/llm/embed';
-import { useSettingsContext } from '../contexts/SettingsContext';
-import { useNetworkStatus } from './useNetworkStatus';
+import { JournalRepository } from '../lib/db/repository';
 import type { EntryImage, EntryType, JournalEntry } from '../types';
 
 interface CaptureInput {
@@ -13,9 +9,12 @@ interface CaptureInput {
   durationMinutes?: number;
 }
 
+/**
+ * Hook for capturing new journal entries. 
+ * Entries are saved to the repository immediately in a 'pending' state.
+ * The background worker will pick them up for enrichment (classification/embedding).
+ */
 export function useCapture() {
-  const { settings } = useSettingsContext();
-  const online = useNetworkStatus();
   const [loading, setLoading] = useState(false);
 
   const submit = useCallback(async ({ text, images, hintType, durationMinutes }: CaptureInput) => {
@@ -23,7 +22,7 @@ export function useCapture() {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    const skeleton: JournalEntry = {
+    const entry: JournalEntry = {
       id,
       created_at: now,
       timestamp: now,
@@ -33,69 +32,19 @@ export function useCapture() {
       tags: [],
       project: null,
       priority: 'medium',
-      sentiment: 'neutral',
       is_done: false,
       duration_minutes: durationMinutes ?? null,
       starred: false,
       links: [],
       embedding_vector: null,
+      classification_status: 'pending',
+      embedding_status: 'pending',
     };
 
-    await putEntry(skeleton);
-    // Show in UI immediately — classification + embedding patch silently after
-    window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
+    await JournalRepository.save(entry);
     setLoading(false);
-
-    if (online && settings.apiKey) {
-      enrichEntry(skeleton, text, images, settings).catch(() => {});
-    }
-
     return id;
-  }, [settings, online]);
+  }, []);
 
   return { submit, loading };
-}
-
-async function enrichEntry(
-  skeleton: JournalEntry,
-  text: string,
-  images: EntryImage[],
-  settings: ReturnType<typeof import('../contexts/SettingsContext').useSettingsContext>['settings'],
-) {
-  const [existingProjects, topTags] = await Promise.all([
-    getExistingProjects(),
-    getTopTags(),
-  ]);
-
-  let classified: JournalEntry = skeleton;
-
-  try {
-    const result = await classifyEntry({
-      text,
-      images,
-      profile: settings.userProfile,
-      apiKey: settings.apiKey,
-      baseUrl: settings.baseUrl,
-      model: settings.model,
-      existingProjects,
-      topTags,
-    });
-    classified = { ...skeleton, ...result, timestamp: Date.now() };
-    await putEntry(classified);
-    window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
-  } catch {
-    // Classification failed — skeleton entry persists
-  }
-
-  try {
-    const vector = await embedText(
-      text,
-      settings.apiKey,
-      settings.baseUrl,
-      settings.embeddingModel,
-    );
-    await putEntry({ ...classified, embedding_vector: vector });
-  } catch {
-    // Embedding failed — entry still usable, just no semantic search
-  }
 }

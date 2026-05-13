@@ -27,9 +27,9 @@ export function Modal({ open, onClose, children, className = '' }: ModalProps) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className={[
-          'relative z-10 w-full max-w-lg bg-card border border-border',
+          'relative z-10 w-full bg-card border border-border',
           'rounded-lg shadow-lg animate-pop-in',
-          className,
+          className || 'max-w-lg',
         ].join(' ')}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

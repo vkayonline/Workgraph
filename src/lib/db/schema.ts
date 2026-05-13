@@ -12,6 +12,8 @@ interface WorkGraphDB extends DBSchema {
       'by-priority': string;
       'by-is_done': number;
       'by-starred': number;
+      'by-classification_status': string;
+      'by-embedding_status': string;
     };
   };
 }
@@ -20,7 +22,7 @@ let dbPromise: Promise<IDBPDatabase<WorkGraphDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<WorkGraphDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<WorkGraphDB>('workgraph', 2, {
+    dbPromise = openDB<WorkGraphDB>('workgraph', 3, {
       async upgrade(db, oldVersion, _newVersion, transaction) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('entries', { keyPath: 'id' });
@@ -32,7 +34,6 @@ export function getDB(): Promise<IDBPDatabase<WorkGraphDB>> {
           store.createIndex('by-starred', 'starred');
         }
         if (oldVersion >= 1 && oldVersion < 2) {
-          // Add by-starred index and backfill links/starred fields on existing entries
           const store = transaction.objectStore('entries');
           store.createIndex('by-starred', 'starred');
           let cursor = await store.openCursor();
@@ -42,8 +43,33 @@ export function getDB(): Promise<IDBPDatabase<WorkGraphDB>> {
               ...val,
               links: val.links ?? [],
               starred: val.starred ?? false,
-            };
+              classification_status: 'processed',
+              embedding_status: val.embedding_vector ? 'processed' : 'pending'
+            } as JournalEntry;
             await cursor.update(patched);
+            cursor = await cursor.continue();
+          }
+        }
+        if (oldVersion < 3) {
+          const store = transaction.objectStore('entries');
+          if (!store.indexNames.contains('by-classification_status')) {
+            store.createIndex('by-classification_status', 'classification_status');
+          }
+          if (!store.indexNames.contains('by-embedding_status')) {
+            store.createIndex('by-embedding_status', 'embedding_status');
+          }
+          // Backfill new fields if they don't exist
+          let cursor = await store.openCursor();
+          while (cursor) {
+            const val = cursor.value as JournalEntry;
+            if (val.classification_status === undefined || val.embedding_status === undefined) {
+              const patched: JournalEntry = {
+                ...val,
+                classification_status: val.classification_status ?? 'processed',
+                embedding_status: val.embedding_status ?? (val.embedding_vector ? 'processed' : 'pending'),
+              };
+              await cursor.update(patched);
+            }
             cursor = await cursor.continue();
           }
         }

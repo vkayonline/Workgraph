@@ -1,7 +1,7 @@
 import { getClient } from './client';
 import { classifySystemPrompt } from './prompts';
 import type { ClassificationResult, EntryImage, UserProfile } from '../../types';
-import { ENTRY_TYPES, PRIORITIES, SENTIMENTS } from '../../types';
+import { ENTRY_TYPES, PRIORITIES } from '../../types';
 
 const CLASSIFY_TOOL = {
   type: 'function' as const,
@@ -15,9 +15,8 @@ const CLASSIFY_TOOL = {
         tags: { type: 'array', items: { type: 'string' }, maxItems: 5 },
         project: { type: ['string', 'null'] },
         priority: { type: 'string', enum: [...PRIORITIES] },
-        sentiment: { type: 'string', enum: [...SENTIMENTS] },
       },
-      required: ['entry_type', 'tags', 'project', 'priority', 'sentiment'],
+      required: ['entry_type', 'tags', 'project', 'priority'],
       additionalProperties: false,
     },
   },
@@ -76,6 +75,5 @@ export async function classifyEntry({
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
     project: typeof parsed.project === 'string' && parsed.project ? parsed.project : null,
     priority: PRIORITIES.includes(parsed.priority) ? parsed.priority : 'medium',
-    sentiment: SENTIMENTS.includes(parsed.sentiment) ? parsed.sentiment : 'neutral',
   };
 }

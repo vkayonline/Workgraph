@@ -5,6 +5,8 @@ import { BottomNav } from './BottomNav';
 import { TopBar } from './TopBar';
 import { NetworkIndicator } from '../shared/NetworkIndicator';
 import { CaptureModal } from '../capture/CaptureModal';
+import { SettingsModal } from '../settings/SettingsModal';
+import { BackgroundProcessor } from '../shared/BackgroundProcessor';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 import { FOCUS_CHAT_INPUT_EVENT } from '../chat/ChatPage';
 
@@ -32,6 +34,7 @@ function isInputFocused(): boolean {
 
 export function AppShell() {
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
 
@@ -57,29 +60,38 @@ export function AppShell() {
   }, [navigate]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-faint">
+    <div className="flex h-dvh overflow-hidden bg-background">
       {isDesktop ? (
         <>
           <Sidebar onCapture={() => setCaptureOpen(true)} />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <TopBar onCapture={() => setCaptureOpen(true)} showCaptureButton />
-            <main className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <TopBar 
+              onCapture={() => setCaptureOpen(true)} 
+              onOpenSettings={() => setSettingsOpen(true)}
+              showCaptureButton 
+            />
+            <main className="flex-1 overflow-y-auto p-6 bg-faint">
               <Outlet />
             </main>
           </div>
         </>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <TopBar onCapture={() => setCaptureOpen(true)} />
-          <main className="flex-1 overflow-y-auto p-4">
+          <TopBar 
+            onCapture={() => setCaptureOpen(true)} 
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+          <main className="flex-1 overflow-y-auto p-4 bg-faint">
             <Outlet />
           </main>
-          <BottomNav onCapture={() => setCaptureOpen(true)} />
+          <BottomNav onCapture={() => setCaptureOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
         </div>
       )}
 
       <NetworkIndicator />
+      <BackgroundProcessor />
       <CaptureModal open={captureOpen} onClose={() => setCaptureOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

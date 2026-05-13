@@ -3,7 +3,15 @@ import type { JournalEntry, EntryType, Priority } from '../../types';
 
 export async function putEntry(entry: JournalEntry): Promise<void> {
   const db = await getDB();
-  await db.put('entries', entry);
+  try {
+    await db.put('entries', entry);
+  } catch (err) {
+    console.error('Failed to save entry to IndexedDB:', err);
+    if (err instanceof Error && err.name === 'QuotaExceededError') {
+      alert('Storage quota exceeded. Please free up space or export/clear old data.');
+    }
+    throw err;
+  }
 }
 
 export async function getEntry(id: string): Promise<JournalEntry | undefined> {
@@ -54,10 +62,10 @@ export async function getPendingTasks(): Promise<JournalEntry[]> {
     });
 }
 
-export async function getOpenBlockers(): Promise<JournalEntry[]> {
+export async function getOpenIssues(): Promise<JournalEntry[]> {
   const db = await getDB();
-  const blockers = await db.getAllFromIndex('entries', 'by-entry_type', 'blocker');
-  return blockers.filter((e) => !e.is_done).sort((a, b) => b.created_at - a.created_at);
+  const issues = await db.getAllFromIndex('entries', 'by-entry_type', 'issue');
+  return issues.filter((e) => !e.is_done).sort((a, b) => b.created_at - a.created_at);
 }
 
 export async function getStarredEntries(): Promise<JournalEntry[]> {

@@ -9,12 +9,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'inline',
       includeAssets: ['favicon.svg', 'icons/pwa-192x192.png', 'icons/pwa-512x512.png'],
       manifest: {
         name: 'WorkGraph',
         short_name: 'WorkGraph',
         description: 'Private local-first work journal',
-        theme_color: '#574747',
+        theme_color: '#6366f1',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
@@ -51,6 +52,7 @@ export default defineConfig({
         ],
         // Clean old caches on SW update
         cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/registerSW.js$/],
       },
       devOptions: {
         // Enable PWA in dev so we can test installability locally
@@ -59,4 +61,13 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@xenova/transformers'],
+  },
 });

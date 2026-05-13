@@ -1,17 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Star } from 'lucide-react';
 import { useEntries } from '../../hooks/useEntries';
 import { EntryCard } from './EntryCard';
 import { EntryDetail } from './EntryDetail';
 import { EmptyState } from '../shared/EmptyState';
 import { SkeletonCard } from '../shared/Skeleton';
+import { JournalRepository, DATA_EVENTS } from '../../lib/db/repository';
 import type { EntryType, JournalEntry } from '../../types';
 import { ENTRY_TYPES } from '../../types';
 
 const TYPE_LABELS: Record<EntryType, string> = {
-  work_log: 'Work log', decision: 'Decision', problem: 'Problem',
+  work_log: 'Work log', decision: 'Decision', issue: 'Issue',
   solution: 'Solution', meeting_note: 'Meeting', task: 'Task',
-  learning: 'Learning', blocker: 'Blocker', risk: 'Risk',
+  learning: 'Learning',
 };
 
 const filterBtnClass = (active: boolean) =>
@@ -32,12 +33,22 @@ function useDebounce<T>(value: T, delay = 250): T {
 }
 
 export function EntryListPage() {
-  const { entries, loading, update, remove } = useEntries();
+  const { entries, loading, update, remove, refresh } = useEntries();
   const [filterType, setFilterType] = useState<EntryType | 'all'>('all');
   const [starredOnly, setStarredOnly] = useState(false);
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query);
   const [selected, setSelected] = useState<JournalEntry | null>(null);
+
+  useEffect(() => {
+    const handler = () => refresh();
+    window.addEventListener(DATA_EVENTS.ENTRY_SAVED, handler);
+    window.addEventListener(DATA_EVENTS.ENTRY_DELETED, handler);
+    return () => {
+      window.removeEventListener(DATA_EVENTS.ENTRY_SAVED, handler);
+      window.removeEventListener(DATA_EVENTS.ENTRY_DELETED, handler);
+    };
+  }, [refresh]);
 
   const filtered = useMemo(() => {
     let list = filterType === 'all' ? entries : entries.filter((e) => e.entry_type === filterType);
@@ -66,7 +77,7 @@ export function EntryListPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search entries…"
-          className="px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0"
+          className="px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0 font-mono"
         />
 
         {/* Filters */}

@@ -14,10 +14,10 @@ export const TEMPLATES: Template[] = [
     content: '## Decision\n\n**We decided to:** \n\n**Because:** \n\n**Alternatives considered:**\n- \n\n**Trade-offs:** ',
   },
   {
-    id: 'blocker',
-    name: 'Blocker',
-    entry_type: 'blocker',
-    content: '## Blocker\n\n**Blocked on:** \n\n**Impact:** \n\n**Who needs to unblock:** \n\n**Workaround (if any):** ',
+    id: 'issue',
+    name: 'Issue',
+    entry_type: 'issue',
+    content: '## Issue\n\n**Description:** \n\n**Impact:** \n\n**Potential solutions:** \n- \n\n**Next steps:** ',
   },
   {
     id: 'weekly-goal',

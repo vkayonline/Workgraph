@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllEntries } from '../lib/db/entries';
+import { JournalRepository, DATA_EVENTS } from '../lib/db/repository';
 
 export interface DashboardStats {
   currentStreak: number;
@@ -65,7 +65,7 @@ export function useDashboardStats(): DashboardStats {
   });
 
   async function compute() {
-    const entries = await getAllEntries();
+    const entries = await JournalRepository.getAll();
     const activeDays = new Set(entries.map((e) => toLocalDateStr(e.created_at)));
     const { current, longest } = calcStreaks(activeDays);
 
@@ -77,8 +77,13 @@ export function useDashboardStats(): DashboardStats {
 
   useEffect(() => {
     compute();
-    window.addEventListener('workgraph:entry-saved', compute);
-    return () => window.removeEventListener('workgraph:entry-saved', compute);
+    const handler = () => compute();
+    window.addEventListener(DATA_EVENTS.ENTRY_SAVED, handler);
+    window.addEventListener(DATA_EVENTS.ENTRY_DELETED, handler);
+    return () => {
+      window.removeEventListener(DATA_EVENTS.ENTRY_SAVED, handler);
+      window.removeEventListener(DATA_EVENTS.ENTRY_DELETED, handler);
+    };
   }, []);
 
   return stats;

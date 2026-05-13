@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: Settings = {
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
   embeddingModel: 'text-embedding-3-small',
+  embeddingSource: 'local',
   theme: 'system',
   lastExportAt: null,
 };
@@ -36,6 +37,13 @@ export function useSettings() {
 
   useEffect(() => {
     applyTheme(settings.theme);
+
+    if (settings.theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme('system');
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
   }, [settings.theme]);
 
   const update = useCallback((patch: Partial<Settings>) => {
