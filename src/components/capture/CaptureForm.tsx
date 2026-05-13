@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, Send, Clock, Sparkles } from 'lucide-react';
 import { Spinner } from '../shared/Spinner';
 import { useCapture } from '../../hooks/useCapture';
 import { TemplatePicker } from './TemplatePicker';
@@ -19,6 +19,7 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
   const [images, setImages] = useState<EntryImage[]>([]);
   const [selectedType, setSelectedType] = useState<EntryType | null>(null);
   const [duration, setDuration] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { submit, loading } = useCapture();
@@ -36,6 +37,7 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
     const tpl = TEMPLATES.find((t) => t.entry_type === type);
     setSelectedType(type);
     if (tpl) setText(tpl.content);
+    setShowTemplates(false);
     textareaRef.current?.focus();
   }
 
@@ -74,6 +76,11 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
     setSelectedType(null);
     setDuration('');
     onSuccess?.();
+    
+    // Reset height if minimal
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -84,29 +91,38 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
   }
 
   return (
-    <div className={`flex flex-col gap-4 ${className}`}>
-      {!minimal && (
-        <TemplatePicker selected={selectedType} onSelect={applyTemplate} />
+    <div className={`flex flex-col gap-2 ${className}`}>
+      {/* Templates / Extra Controls */}
+      {(showTemplates || !minimal) && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <TemplatePicker selected={selectedType} onSelect={applyTemplate} />
+        </div>
       )}
 
-      <div className={`flex flex-col border border-border rounded-lg bg-card shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10`}>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
-          placeholder="What's on your mind? (Cmd+Enter to save)"
-          rows={minimal ? 1 : 4}
-          className="w-full p-3 text-sm bg-transparent text-foreground placeholder:text-muted-foreground resize-none border-none outline-none font-mono max-h-64 overflow-y-auto"
-          onInput={(e) => {
-            if (minimal) {
+      <div className={`flex flex-col border border-border rounded-xl bg-card shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 overflow-hidden`}>
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onPaste={handlePaste}
+            onKeyDown={handleKeyDown}
+            placeholder={minimal ? "Log something..." : "What's on your mind? (Cmd+Enter to save)"}
+            rows={minimal ? 1 : 4}
+            className={`w-full p-3 text-sm bg-transparent text-foreground placeholder:text-muted-foreground resize-none border-none outline-none font-sans leading-relaxed max-h-64 overflow-y-auto ${minimal ? 'pr-10' : ''}`}
+            onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = 'auto';
               target.style.height = `${target.scrollHeight}px`;
-            }
-          }}
-        />
+            }}
+          />
+          
+          {minimal && !text.trim() && images.length === 0 && (
+            <div className="absolute right-3 top-3 pointer-events-none opacity-40">
+              <kbd className="text-[10px] font-sans">⌘↵</kbd>
+            </div>
+          )}
+        </div>
 
         {images.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pb-3">
@@ -116,15 +132,15 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
           </div>
         )}
 
-        <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-faint/30">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50 bg-faint/30">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+              className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all"
+              title="Attach Image"
             >
-              <Paperclip size={14} className="group-hover:rotate-12 transition-transform" />
-              <span className="font-medium">Attach</span>
+              <Paperclip size={18} />
             </button>
             <input
               ref={fileInputRef}
@@ -135,17 +151,34 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
               onChange={handleFileChange}
             />
 
+            {minimal && (
+              <button
+                type="button"
+                onClick={() => setShowTemplates(!showTemplates)}
+                className={`p-2 rounded-lg transition-all ${showTemplates ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
+                title="Use Template"
+              >
+                <Sparkles size={18} />
+              </button>
+            )}
+
             {selectedType === 'work_log' && (
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Duration</label>
+              <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border/50">
+                <Clock size={14} className="text-muted-foreground" />
                 <input
                   type="number"
                   min="0"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="min"
-                  className="w-16 px-2 py-0.5 text-xs border border-border rounded bg-background text-foreground focus:outline-none focus:border-primary"
+                  className="w-12 px-1 py-0.5 text-xs bg-transparent border-none focus:outline-none text-foreground font-medium"
                 />
+              </div>
+            )}
+            
+            {selectedType && !minimal && (
+              <div className="ml-2 px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest">
+                {selectedType.replace('_', ' ')}
               </div>
             )}
           </div>
@@ -153,23 +186,13 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
           <button
             onClick={handleSubmit}
             disabled={loading || (!text.trim() && images.length === 0)}
-            className="h-8 px-4 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--color-primary),white_25%)] transition-colors disabled:opacity-50 text-xs font-medium"
+            className="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--color-primary),white_25%)] transition-colors disabled:opacity-30 shadow-lg shadow-primary/20"
+            aria-label="Save entry"
           >
-            {loading ? <Spinner size={14} /> : (
-              <span className="flex items-center gap-1.5">
-                Save <kbd className="text-[10px] opacity-70">⌘↵</kbd>
-              </span>
-            )}
+            {loading ? <Spinner size={14} /> : <Send size={16} />}
           </button>
         </div>
       </div>
-
-      {minimal && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground shrink-0 mr-1">Templates:</span>
-          <TemplatePicker selected={selectedType} onSelect={applyTemplate} />
-        </div>
-      )}
     </div>
   );
 }

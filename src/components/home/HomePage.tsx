@@ -155,7 +155,11 @@ export function HomePage() {
         </section>
       </div>
 
-      <QuickLog />
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 p-4 z-20 pointer-events-none">
+        <div className="max-w-2xl mx-auto w-full pointer-events-auto">
+          <QuickLog />
+        </div>
+      </div>
     </div>
 
     {selected && (
