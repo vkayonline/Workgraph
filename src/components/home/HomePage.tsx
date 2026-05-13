@@ -99,7 +99,7 @@ export function HomePage() {
 
       <div className="grid grid-cols-1 gap-6">
         {tasks.length > 0 && (
-          <section className="bg-card border border-border rounded-xl p-4 shadow-sm">
+          <section className="px-1">
             <div className="flex items-center justify-between mb-4 px-1">
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -116,7 +116,7 @@ export function HomePage() {
         )}
 
         {issues.length > 0 && (
-          <section className="bg-card border border-border rounded-xl p-4 shadow-sm">
+          <section className="px-1">
             <div className="flex items-center justify-between mb-4 px-1">
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-danger" />
@@ -155,11 +155,12 @@ export function HomePage() {
         </section>
       </div>
 
-      <div className="fixed bottom-6 left-0 right-0 md:left-64 z-20 pointer-events-none px-4 md:px-6">
+      <div className="fixed bottom-6 left-0 right-0 lg:left-56 z-20 pointer-events-none px-6 md:px-12 lg:px-6">
         <div className="max-w-2xl mx-auto w-full pointer-events-auto">
           <QuickLog />
         </div>
       </div>
+
     </div>
 
     {selected && (
