@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Hexagon, Globe, Key, User, Monitor, Cpu, RefreshCw, ChevronLeft } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { Button } from '../shared/Button';
@@ -26,38 +26,48 @@ export function SetupScreen() {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleNext(e: FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { setError('Please enter your name.'); return; }
-    if (!dayToDay.trim()) { setError('Please describe what you do day to day.'); return; }
-    if (!apiKey.trim()) { setError('Please enter your API key.'); return; }
-    if (!baseUrl.trim()) { setError('Please enter a base URL.'); return; }
+  // Auto-load models when provider info is likely complete
+  useEffect(() => {
+    if (step === 2 && apiKey.trim() && baseUrl.trim() && availableModels.length === 0) {
+      loadModels();
+    }
+  }, [step]);
 
+  async function loadModels() {
+    if (!apiKey.trim() || !baseUrl.trim()) return;
+    
     setIsLoadingModels(true);
     setError('');
     try {
       const models = await listModels(apiKey.trim(), baseUrl.trim());
       setAvailableModels(models.map(m => m.id));
       if (models.length > 0) {
-        // Default to first model if current one isn't in list
         if (!models.some(m => m.id === model)) {
           setModel(models[0].id);
         }
       }
-      setStep(2);
     } catch (err) {
-      setError('Failed to load models. Please check your API key and Base URL.');
+      // Soft handle: show error but don't block
+      setError('Could not reach provider to load models. Please check your credentials.');
     } finally {
       setIsLoadingModels(false);
     }
   }
 
+  function handleNext(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) { setError('Please enter your name.'); return; }
+    if (!dayToDay.trim()) { setError('Please describe what you do day to day.'); return; }
+    setError('');
+    setStep(2);
+  }
+
   function handleComplete(e: FormEvent) {
     e.preventDefault();
-    if (!model.trim()) {
-      setError('Please select a model.');
-      return;
-    }
+    if (!apiKey.trim()) { setError('Please enter your API key.'); return; }
+    if (!baseUrl.trim()) { setError('Please enter a base URL.'); return; }
+    if (!model.trim()) { setError('Please select a model.'); return; }
+    
     update({
       userProfile: { name: name.trim(), dayToDay: dayToDay.trim() },
       apiKey: apiKey.trim(),
@@ -87,7 +97,7 @@ export function SetupScreen() {
         {error && <div className="mb-6"><ErrorBanner message={error} onDismiss={() => setError('')} /></div>}
 
         {step === 1 ? (
-          <form onSubmit={handleNext} className="space-y-6">
+          <form onSubmit={handleNext} className="space-y-6 animate-in fade-in duration-300">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="name" className={labelClass}>
@@ -113,12 +123,28 @@ export function SetupScreen() {
                   value={dayToDay}
                   onChange={(e) => setDayToDay(e.target.value)}
                   placeholder="e.g. Senior Developer focusing on AI tools..."
-                  rows={2}
+                  rows={4}
                   className={`${inputClass} resize-none`}
                 />
               </div>
+            </div>
 
-              <div className="space-y-2 pt-2 border-t border-border/50">
+            <Button type="submit" size="lg" className="w-full mt-4 h-12 text-base font-bold shadow-xl shadow-primary/20">
+              Continue to AI Setup →
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleComplete} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="space-y-4">
+              <button 
+                type="button" 
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider mb-2"
+              >
+                <ChevronLeft size={14} /> Back to Profile
+              </button>
+
+              <div className="space-y-2">
                 <label className={labelClass}>
                   <RefreshCw size={12} /> Select Provider
                 </label>
@@ -127,7 +153,10 @@ export function SetupScreen() {
                     <button
                       key={p.label}
                       type="button"
-                      onClick={() => setBaseUrl(p.url)}
+                      onClick={() => {
+                        setBaseUrl(p.url);
+                        if (apiKey) setTimeout(loadModels, 10);
+                      }}
                       className={`px-3 py-1.5 text-xs font-semibold border rounded-md transition-all shadow-sm ${
                         baseUrl === p.url 
                           ? 'bg-primary border-primary text-primary-foreground' 
@@ -149,6 +178,7 @@ export function SetupScreen() {
                   type="text"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
+                  onBlur={() => { if (apiKey) loadModels(); }}
                   placeholder="https://api.openai.com/v1"
                   className={inputClass}
                 />
@@ -163,34 +193,16 @@ export function SetupScreen() {
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
+                  onBlur={() => { if (baseUrl) loadModels(); }}
                   placeholder="sk-..."
                   className={inputClass}
                 />
               </div>
-            </div>
 
-            <Button type="submit" size="lg" className="w-full mt-4 h-12 text-base font-bold shadow-xl shadow-primary/20" disabled={isLoadingModels}>
-              {isLoadingModels ? <><Spinner size={16} className="mr-2" /> Connecting...</> : 'Continue to Model Selection →'}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleComplete} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4">
-              <button 
-                type="button" 
-                onClick={() => setStep(1)}
-                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider mb-2"
-              >
-                <ChevronLeft size={14} /> Back to Provider
-              </button>
-
-              <div className="space-y-2">
+              <div className="space-y-2 pt-2 border-t border-border/50">
                 <label htmlFor="model" className={labelClass}>
-                  <Cpu size={12} /> Choose Your Model
+                  <Cpu size={12} /> {isLoadingModels ? <Spinner size={10} className="mr-1" /> : null} Choose Model
                 </label>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Select the brain for your journal. We recommend <strong>gpt-4o-mini</strong> or <strong>Claude 3.5 Sonnet</strong> for the best experience.
-                </p>
                 <select
                   id="model"
                   value={model}
@@ -206,18 +218,13 @@ export function SetupScreen() {
                     <option value={model}>{model}</option>
                   )}
                 </select>
-              </div>
-
-              <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-2">
-                <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                  <Hexagon size={12} /> Summary
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="text-muted-foreground">Provider:</div>
-                  <div className="font-semibold truncate">{baseUrl.includes('openai') ? 'OpenAI' : baseUrl.includes('openrouter') ? 'OpenRouter' : 'Custom'}</div>
-                  <div className="text-muted-foreground">User:</div>
-                  <div className="font-semibold truncate">{name}</div>
-                </div>
+                <button 
+                  type="button" 
+                  onClick={loadModels}
+                  className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider"
+                >
+                  Refresh models
+                </button>
               </div>
             </div>
 
