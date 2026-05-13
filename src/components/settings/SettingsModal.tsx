@@ -30,8 +30,6 @@ const getSettingsSlice = (s: Settings) => ({
   apiKey: s.apiKey,
   baseUrl: s.baseUrl,
   model: s.model,
-  embeddingModel: s.embeddingModel,
-  embeddingSource: s.embeddingSource
 });
 
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -86,8 +84,6 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
       apiKey: state.apiKey.trim(),
       baseUrl: state.baseUrl.trim(),
       model: state.model.trim(),
-      embeddingModel: state.embeddingModel.trim(),
-      embeddingSource: state.embeddingSource,
       userProfile: { name: state.name.trim(), dayToDay: state.dayToDay.trim() }
     });
     setSaved(true);
@@ -272,36 +268,17 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                       <label className="text-sm font-semibold flex items-center gap-2">
                         <ShieldCheck size={14} className="text-primary" /> Embeddings
                       </label>
-                      <div className="flex bg-faint p-1 rounded-lg border border-border">
-                        <button
-                          onClick={() => setState({...state, embeddingSource: 'local'})}
-                          className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${state.embeddingSource === 'local' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground'}`}
-                        >
-                          Local (GTE)
-                        </button>
-                        <button
-                          onClick={() => setState({...state, embeddingSource: 'api'})}
-                          className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${state.embeddingSource === 'api' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground'}`}
-                        >
-                          Server API
-                        </button>
+                      <div className="flex bg-faint p-3 rounded-lg border border-border items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <ShieldCheck size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-foreground leading-none mb-1">Local-Only (GTE)</p>
+                          <p className="text-[10px] text-muted-foreground leading-tight">Always private. No data sent to provider for search.</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {state.embeddingSource === 'api' && (
-                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        API Embedding Model
-                      </label>
-                      <input
-                        className={inputClass}
-                        value={state.embeddingModel}
-                        onChange={(e) => setState({ ...state, embeddingModel: e.target.value })}
-                        placeholder="text-embedding-3-small"
-                      />
-                    </div>
-                  )}
 
                   <button
                     onClick={handleLoadModels}

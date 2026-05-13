@@ -67,8 +67,6 @@ export interface Settings {
   apiKey: string;
   baseUrl: string;
   model: string;
-  embeddingModel: string;
-  embeddingSource: 'local' | 'api';
   theme: Theme;
   lastExportAt: number | null;
 }

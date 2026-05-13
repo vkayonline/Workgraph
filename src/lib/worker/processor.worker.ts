@@ -69,13 +69,7 @@ async function runLoop() {
     if (pendingEmbedding.length > 0) {
       const entry = pendingEmbedding[0];
       try {
-        const vector = await embedText(
-          entry.raw_text,
-          currentSettings.apiKey,
-          currentSettings.baseUrl,
-          currentSettings.embeddingModel,
-          currentSettings.embeddingSource
-        );
+        const vector = await embedText(entry.raw_text);
         await putEntry({
           ...entry,
           embedding_vector: vector,

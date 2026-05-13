@@ -225,15 +225,9 @@ async function pickRelevant(
   const terms = q.split(/\s+/).filter(t => t.length > 2);
 
   let vectorResults: JournalEntry[] = [];
-  if (embeddedEntries.length >= 1 && settings.apiKey && settings.embeddingModel) {
+  if (embeddedEntries.length >= 1) {
     try {
-      const vector = await embedText(
-        question, 
-        settings.apiKey, 
-        settings.baseUrl, 
-        settings.embeddingModel,
-        settings.embeddingSource
-      );
+      const vector = await embedText(question);
       vectorResults = topK(vector, embeddedEntries, 12);
     } catch (err) {
       console.warn('Semantic search failed, falling back to keywords:', err);

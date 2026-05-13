@@ -21,8 +21,6 @@ export function SetupScreen() {
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [baseUrl, setBaseUrl] = useState(settings.baseUrl);
   const [model, setModel] = useState(settings.model);
-  const [embeddingSource, setEmbeddingSource] = useState<'local' | 'api'>(settings.embeddingSource);
-  const [embeddingModel, setEmbeddingModel] = useState(settings.embeddingModel);
   
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -60,17 +58,11 @@ export function SetupScreen() {
       setError('Please select a model.');
       return;
     }
-    if (embeddingSource === 'api' && !embeddingModel.trim()) {
-      setError('Please enter an embedding model.');
-      return;
-    }
     update({
       userProfile: { name: name.trim(), dayToDay: dayToDay.trim() },
       apiKey: apiKey.trim(),
       baseUrl: baseUrl.trim(),
       model: model.trim(),
-      embeddingSource,
-      embeddingModel: embeddingModel.trim(),
     });
   }
 
@@ -215,65 +207,6 @@ export function SetupScreen() {
                   )}
                 </select>
               </div>
-
-              <div className="space-y-3 pt-4 border-t border-border/50">
-                <label className={labelClass}>
-                  <ShieldCheck size={12} /> Embeddings Strategy
-                </label>
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEmbeddingSource('local')}
-                    className={`p-3 text-left border rounded-xl transition-all shadow-sm ${
-                      embeddingSource === 'local' 
-                        ? 'bg-primary/5 border-primary ring-1 ring-primary' 
-                        : 'bg-background border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-foreground">Local (Recommended)</span>
-                      {embeddingSource === 'local' && <div className="w-2 h-2 bg-primary rounded-full" />}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      Runs 100% in your browser. Fast, private, and free. Best for most users.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setEmbeddingSource('api')}
-                    className={`p-3 text-left border rounded-xl transition-all shadow-sm ${
-                      embeddingSource === 'api' 
-                        ? 'bg-primary/5 border-primary ring-1 ring-primary' 
-                        : 'bg-background border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-foreground">Provider API</span>
-                      {embeddingSource === 'api' && <div className="w-2 h-2 bg-primary rounded-full" />}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      Uses your chosen provider (e.g. OpenAI). More accurate but requires data to be sent to the server.
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {embeddingSource === 'api' && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <label htmlFor="embeddingModel" className={labelClass}>
-                    Embedding Model Name
-                  </label>
-                  <input
-                    id="embeddingModel"
-                    type="text"
-                    value={embeddingModel}
-                    onChange={(e) => setEmbeddingModel(e.target.value)}
-                    placeholder="text-embedding-3-small"
-                    className={inputClass}
-                  />
-                </div>
-              )}
 
               <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-2">
                 <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">

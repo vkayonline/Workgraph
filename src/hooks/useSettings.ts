@@ -8,8 +8,6 @@ const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o-mini',
-  embeddingModel: 'text-embedding-3-small',
-  embeddingSource: 'local',
   theme: 'system',
   lastExportAt: null,
 };
