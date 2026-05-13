@@ -65,8 +65,7 @@ export function HomePage() {
   }
 
   return (
-    <>
-    <div className="max-w-2xl mx-auto flex flex-col gap-8 pb-24">
+    <div className="max-w-2xl mx-auto flex flex-col gap-8 min-h-full relative pb-10">
       {/* Greeting & Streak Hero */}
       <div className="relative overflow-hidden bg-primary/5 border border-primary/10 rounded-2xl p-6 flex items-start justify-between gap-4">
         <div className="relative z-10">
@@ -155,10 +154,8 @@ export function HomePage() {
         </section>
       </div>
 
-      <div className="fixed bottom-6 left-0 right-0 lg:left-56 z-20 pointer-events-none px-6 md:px-12 lg:px-6">
-        <div className="max-w-2xl mx-auto w-full pointer-events-auto">
-          <QuickLog />
-        </div>
+      <div className="sticky bottom-6 mt-auto z-20 w-full px-1">
+        <QuickLog />
       </div>
 
     </div>
