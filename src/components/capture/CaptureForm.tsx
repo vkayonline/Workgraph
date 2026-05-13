@@ -99,7 +99,7 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
         </div>
       )}
 
-      <div className={`flex flex-col border border-border rounded-xl bg-card shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 overflow-hidden`}>
+      <div className={`flex flex-col ${minimal ? '' : 'border border-border rounded-xl bg-card shadow-sm'} transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 overflow-hidden`}>
         <div className="relative">
           <textarea
             ref={textareaRef}
@@ -132,7 +132,7 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
           </div>
         )}
 
-        <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/50 bg-faint/30">
+        <div className={`flex items-center justify-between px-2 py-1.5 ${minimal ? '' : 'border-t border-border/50 bg-faint/30'}`}>
           <div className="flex items-center gap-1">
             <button
               type="button"
