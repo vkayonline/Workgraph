@@ -1,6 +1,6 @@
 import { getClient } from './client';
 import { classifySystemPrompt } from './prompts';
-import type { ClassificationResult, UserProfile, OperationalGravity } from '../../types';
+import type { ClassificationResult, UserProfile } from '../../types';
 import { ENTRY_TYPES } from '../../types';
 
 const CLASSIFY_TOOL = {

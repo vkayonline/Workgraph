@@ -1,5 +1,5 @@
 import { getDB } from './schema';
-import type { JournalEntry, EntryType, OperationalGravity, Project, Tag, Attachment, Edge, Commitment, CommitmentStatus } from '../../types';
+import type { JournalEntry, EntryType, Project, Tag, Attachment, Edge, Commitment, CommitmentStatus } from '../../types';
 
 export async function putEntry(entry: JournalEntry): Promise<void> {
   const db = await getDB();
@@ -190,9 +190,21 @@ export async function searchEntries(query: string, limit = 50): Promise<JournalE
   const q = query.toLowerCase().trim();
   const terms = q.split(/\s+/);
   
-  // Simple client-side search without pulling the entire DB at once.
-  // We stream through the DB until we hit our limit.
+  // Pre-fetch all tags and map them to entries
   const db = await getDB();
+  const allEntryTags = await db.getAll('entry_tags');
+  const allTags = await db.getAll('tags');
+  const tagNameMap = new Map(allTags.map(tag => [tag.id, tag.name]));
+  const entryTagsMap = new Map<string, string[]>();
+
+  for (const et of allEntryTags) {
+    if (tagNameMap.has(et.tag_id)) {
+      const tags = entryTagsMap.get(et.entry_id) || [];
+      tags.push(tagNameMap.get(et.tag_id)!);
+      entryTagsMap.set(et.entry_id, tags);
+    }
+  }
+
   const tx = db.transaction('entries', 'readonly');
   const store = tx.objectStore('entries');
   let cursor = await store.index('by-created_at').openCursor(null, 'prev');
@@ -201,9 +213,11 @@ export async function searchEntries(query: string, limit = 50): Promise<JournalE
   
   while (cursor && results.length < limit * 2) { // Fetch slightly more to sort
     const e = cursor.value;
+    const entryTags = entryTagsMap.get(e.id) || [];
     const haystack = [
       e.raw_text,
       e.entry_type.replace('_', ' '),
+      ...entryTags,
     ].join(' ').toLowerCase();
     
     let score = 0;
