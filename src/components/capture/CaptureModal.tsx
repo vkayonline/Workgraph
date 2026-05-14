@@ -1,13 +1,15 @@
 import { X } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { CaptureForm } from './CaptureForm';
+import type { EntryType } from '../../types';
 
 interface CaptureModalProps {
   open: boolean;
   onClose: () => void;
+  initialType?: EntryType | null;
 }
 
-export function CaptureModal({ open, onClose }: CaptureModalProps) {
+export function CaptureModal({ open, onClose, initialType = null }: CaptureModalProps) {
   return (
     <Modal open={open} onClose={onClose} className="max-w-xl">
       <div className="p-5">
@@ -22,7 +24,7 @@ export function CaptureModal({ open, onClose }: CaptureModalProps) {
           </button>
         </div>
 
-        <CaptureForm onSuccess={onClose} autoFocus={open} />
+        <CaptureForm onSuccess={onClose} autoFocus={open} initialType={initialType} />
       </div>
     </Modal>
   );

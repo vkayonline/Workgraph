@@ -81,10 +81,7 @@ export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProp
         ) : (
           <EntryTypeBadge type={entry.entry_type} />
         )}
-        {entry.project && (
-          <span className="text-xs text-muted-foreground truncate">{entry.project}</span>
-        )}
-        <PriorityDot priority={entry.priority} />
+        <PriorityDot gravity={entry.operational_gravity} />
         <button
           onClick={handleStarToggle}
           className={[
@@ -110,9 +107,6 @@ export function EntryCard({ entry, onClick, onUpdate, highlight }: EntryCardProp
         <span className="font-sans">{formatTime(entry.created_at)}</span>
         {entry.duration_minutes != null && (
           <><span>·</span><span>{entry.duration_minutes}m</span></>
-        )}
-        {entry.tags.length > 0 && (
-          <><span>·</span><span>{entry.tags.map((t) => `#${t}`).join(' ')}</span></>
         )}
       </div>
     </div>

@@ -1,27 +1,31 @@
-import type { Priority } from '../../types';
+import type { OperationalGravity } from '../../types';
 
 interface PriorityDotProps {
-  priority: Priority;
+  gravity: OperationalGravity;
   showLabel?: boolean;
 }
 
-const COLOR: Record<Priority, string> = {
-  low: 'var(--color-priority-low)',
-  medium: 'var(--color-priority-medium)',
-  high: 'var(--color-priority-high)',
-  critical: 'var(--color-priority-critical)',
-};
+// TODO: Refine visual representation of operational gravity
+export function PriorityDot({ gravity, showLabel = false }: PriorityDotProps) {
+  const color = gravity > 0.75 ? 'var(--color-priority-critical)' :
+                gravity > 0.5 ? 'var(--color-priority-high)' :
+                gravity > 0.25 ? 'var(--color-priority-medium)' :
+                'var(--color-priority-low)';
 
-export function PriorityDot({ priority, showLabel = false }: PriorityDotProps) {
+  const label = gravity > 0.75 ? 'Critical' :
+                gravity > 0.5 ? 'High' :
+                gravity > 0.25 ? 'Medium' :
+                'Low';
+
   return (
-    <span className="inline-flex items-center gap-1.5" title={priority}>
+    <span className="inline-flex items-center gap-1.5" title={`Operational Gravity: ${gravity.toFixed(2)}`}>
       <span
         className="inline-block w-2 h-2 rounded-full shrink-0"
-        style={{ backgroundColor: COLOR[priority] }}
-        aria-label={`Priority: ${priority}`}
+        style={{ backgroundColor: color }}
+        aria-label={`Operational Gravity: ${label}`}
       />
       {showLabel && (
-        <span className="text-xs text-muted-foreground capitalize">{priority}</span>
+        <span className="text-xs text-muted-foreground capitalize">{label}</span>
       )}
     </span>
   );

@@ -1,4 +1,4 @@
-# WorkGraph
+# Recall
 
 A privacy-first, single-user, local-first PWA work journal. Capture thoughts in under 5 seconds. LLM auto-classifies everything. Query your accumulated knowledge conversationally via semantic search.
 

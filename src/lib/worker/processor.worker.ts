@@ -1,7 +1,6 @@
 import { 
-  getAllEntries, 
+  getEntriesPaginated, 
   putEntry, 
-  getExistingProjects, 
   getTopTags 
 } from '../db/entries';
 import { embedText } from '../llm/embed';
@@ -19,7 +18,7 @@ async function runLoop() {
   if (!isRunning || !currentSettings) return;
 
   try {
-    const all = await getAllEntries();
+    const all = await getEntriesPaginated(1000, 0); // Temporary fix to process recent entries
     const now = Date.now();
 
     // Find entries that need work AND are eligible for retry
@@ -41,15 +40,15 @@ async function runLoop() {
     if (isOnline && currentSettings.apiKey && pendingClassification.length > 0) {
       const entry = pendingClassification[0];
       try {
-        const [existingProjects, topTags] = await Promise.all([getExistingProjects(), getTopTags()]);
+        const topTagsData = await getTopTags();
+        const topTags = topTagsData.map(t => t.name);
         const result = await classifyEntry({
           text: entry.raw_text,
-          images: entry.images,
           profile: currentSettings.userProfile,
           apiKey: currentSettings.apiKey,
           baseUrl: currentSettings.baseUrl,
           model: currentSettings.model,
-          existingProjects,
+          existingProjects: [],
           topTags,
         });
         

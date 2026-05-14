@@ -1,4 +1,4 @@
-import { getAllEntries } from './db/entries';
+import { getEntriesPaginated } from './db/entries';
 import { getDB } from './db/schema';
 
 export interface DiagnosticReport {
@@ -18,7 +18,7 @@ export interface DiagnosticReport {
  * This is used by AI agents and developers to identify data integrity issues.
  */
 export async function runDiagnostics(): Promise<DiagnosticReport> {
-  const all = await getAllEntries();
+  const all = await getEntriesPaginated(99999, 0); // Fetch all for diagnostics
   
   const classificationRetries = all.map(e => e.processing_metadata?.classification_retries || 0);
   const embeddingRetries = all.map(e => e.processing_metadata?.embedding_retries || 0);
@@ -52,7 +52,7 @@ export async function runDiagnostics(): Promise<DiagnosticReport> {
  * Forces a re-processing of all failed entries.
  */
 export async function retryAllFailed(): Promise<{ classification: number, embedding: number }> {
-  const all = await getAllEntries();
+  const all = await getEntriesPaginated(99999, 0); // Fetch all for diagnostics
   let c = 0, e = 0;
   
   const db = await getDB();
@@ -76,6 +76,6 @@ export async function retryAllFailed(): Promise<{ classification: number, embedd
   }
   
   await tx.done;
-  window.dispatchEvent(new CustomEvent('workgraph:entry-saved'));
+  window.dispatchEvent(new CustomEvent('recall:entry-saved'));
   return { classification: c, embedding: e };
 }

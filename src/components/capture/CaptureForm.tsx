@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Paperclip, Send, Clock, Sparkles } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Clock, Sparkles, Brain, ArrowRight } from 'lucide-react';
 import { Spinner } from '../shared/Spinner';
 import { useCapture } from '../../hooks/useCapture';
+import { useSemanticSearch } from '../../hooks/useSemanticSearch';
 import { TemplatePicker } from './TemplatePicker';
-import { ImagePreview } from './ImagePreview';
-import type { EntryType, EntryImage } from '../../types';
+import { EntryTypeBadge } from '../entries/EntryTypeBadge';
+import type { EntryType } from '../../types';
 import { TEMPLATES } from '../../data/templates';
 
 interface CaptureFormProps {
@@ -12,17 +13,39 @@ interface CaptureFormProps {
   className?: string;
   autoFocus?: boolean;
   minimal?: boolean;
+  initialType?: EntryType | null;
 }
 
-export function CaptureForm({ onSuccess, className = '', autoFocus = false, minimal = false }: CaptureFormProps) {
+export function CaptureForm({ 
+  onSuccess, 
+  className = '', 
+  autoFocus = false, 
+  minimal = false,
+  initialType = null
+}: CaptureFormProps) {
   const [text, setText] = useState('');
-  const [images, setImages] = useState<EntryImage[]>([]);
   const [selectedType, setSelectedType] = useState<EntryType | null>(null);
   const [duration, setDuration] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { submit, loading } = useCapture();
+
+  // Proactive Resurfacing Hook
+  const { results: relatedMemories, isSearching } = useSemanticSearch(text, 2);
+
+  // Reset/Initialize based on initialType
+  useEffect(() => {
+    if (initialType) {
+      const tpl = TEMPLATES.find((t) => t.entry_type === initialType);
+      setSelectedType(initialType);
+      if (tpl) setText(tpl.content);
+      else setText('');
+    } else {
+      setSelectedType(null);
+      setText('');
+    }
+    setDuration('');
+  }, [initialType]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -42,37 +65,73 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
   }
 
   async function handlePaste(e: React.ClipboardEvent) {
-    const items = Array.from(e.clipboardData.items);
-    const imageItems = items.filter((i) => i.type.startsWith('image/'));
-    if (imageItems.length === 0) return;
-    e.preventDefault();
-    const newImages = await Promise.all(imageItems.map(readClipboardItem));
-    setImages((prev) => [...prev, ...newImages]);
+    // Check for URLs for auto-hydration
+    const pasteText = e.clipboardData.getData('text');
+    if (isValidUrl(pasteText)) {
+      const hydration = detectAndHydrate(pasteText);
+      if (hydration) {
+        // Only auto-hydrate if the text field is empty or just contains the URL
+        if (!text.trim() || text.trim() === pasteText) {
+          if (hydration.type) setSelectedType(hydration.type);
+          if (hydration.content) setText(hydration.content);
+          // In a real app, we might fetch the title from an API here
+        }
+      }
+    }
   }
 
-  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    const newImages = await Promise.all(
-      files.filter((f) => f.type.startsWith('image/')).map(readFile)
-    );
-    setImages((prev) => [...prev, ...newImages]);
-    e.target.value = '';
+  function isValidUrl(str: string) {
+    try {
+      new URL(str);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  function removeImage(id: string) {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+  function detectAndHydrate(url: string) {
+    // GitHub PR/Issue
+    const githubMatch = url.match(/github\.com\/([^/]+)\/([^/]+)\/(pull|issues)\/(\d+)/);
+    if (githubMatch) {
+      const [_, org, repo, type, num] = githubMatch;
+      return {
+        type: type === 'pull' ? 'work_log' as EntryType : 'issue' as EntryType,
+        content: `[${org}/${repo}] ${type === 'pull' ? 'PR' : 'Issue'} #${num}\n\n${url}`,
+      };
+    }
+
+    // Linear
+    const linearMatch = url.match(/linear\.app\/([^/]+)\/issue\/([^-]+)-(\d+)/);
+    if (linearMatch) {
+      const [_, _team, proj, num] = linearMatch;
+      return {
+        type: 'task' as EntryType,
+        content: `[${proj}-${num}] Linear Issue\n\n${url}`,
+      };
+    }
+
+    // Jira
+    const jiraMatch = url.match(/atlassian\.net\/browse\/([^-]+)-(\d+)/);
+    if (jiraMatch) {
+      const [_, proj, num] = jiraMatch;
+      return {
+        type: 'task' as EntryType,
+        content: `[${proj}-${num}] Jira Ticket\n\n${url}`,
+      };
+    }
+
+    return null;
   }
 
   async function handleSubmit() {
-    if (!text.trim() && images.length === 0) return;
+    if (!text.trim()) return;
     const durationMin = duration.trim() ? parseInt(duration, 10) : undefined;
     await submit({
-      text, images,
+      text,
       hintType: selectedType ?? undefined,
       durationMinutes: durationMin && !isNaN(durationMin) ? durationMin : undefined,
     });
     setText('');
-    setImages([]);
     setSelectedType(null);
     setDuration('');
     onSuccess?.();
@@ -117,40 +176,42 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
             }}
           />
           
-          {minimal && !text.trim() && images.length === 0 && (
+          {minimal && !text.trim() && (
             <div className="absolute right-3 top-3 pointer-events-none opacity-40">
               <kbd className="text-[10px] font-sans">⌘↵</kbd>
             </div>
           )}
         </div>
 
-        {images.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-3 pb-3">
-            {images.map((img) => (
-              <ImagePreview key={img.id} image={img} onRemove={removeImage} />
-            ))}
+        {/* Proactive Resurfacing UI */}
+        {relatedMemories.length > 0 && (
+          <div className="px-3 pb-2 animate-in fade-in slide-in-from-top-1 duration-300">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Brain size={10} className="text-primary/60" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Related Context</span>
+              {isSearching && <Spinner size={8} className="ml-1 opacity-40" />}
+            </div>
+            <div className="flex flex-col gap-1">
+              {relatedMemories.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => window.open(`/entries?id=${m.id}`, '_blank')}
+                  className="flex items-center gap-2 p-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 border border-primary/10 transition-all text-left group"
+                >
+                  <EntryTypeBadge type={m.entry_type} className="scale-75 origin-left" />
+                  <span className="text-[11px] text-foreground/70 truncate flex-1 leading-none">
+                    {m.raw_text.split('\n')[0].slice(0, 80)}
+                  </span>
+                  <ArrowRight size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-all" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         <div className={`flex items-center justify-between px-2 py-1.5 ${minimal ? '' : 'border-t border-border/50 bg-faint/30'}`}>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all"
-              title="Attach Image"
-            >
-              <Paperclip size={18} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-
             {minimal && (
               <button
                 type="button"
@@ -185,7 +246,7 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
 
           <button
             onClick={handleSubmit}
-            disabled={loading || (!text.trim() && images.length === 0)}
+            disabled={loading || !text.trim()}
             className="h-8 w-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--color-primary),white_25%)] transition-colors disabled:opacity-30 shadow-lg shadow-primary/20"
             aria-label="Save entry"
           >
@@ -195,33 +256,4 @@ export function CaptureForm({ onSuccess, className = '', autoFocus = false, mini
       </div>
     </div>
   );
-}
-
-async function readClipboardItem(item: DataTransferItem): Promise<EntryImage> {
-  return new Promise((resolve) => {
-    const file = item.getAsFile()!;
-    const reader = new FileReader();
-    reader.onload = () =>
-      resolve({
-        id: crypto.randomUUID(),
-        data_url: reader.result as string,
-        mime_type: file.type,
-        file_name: file.name || 'pasted-image.png',
-      });
-    reader.readAsDataURL(file);
-  });
-}
-
-async function readFile(file: File): Promise<EntryImage> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () =>
-      resolve({
-        id: crypto.randomUUID(),
-        data_url: reader.result as string,
-        mime_type: file.type,
-        file_name: file.name,
-      });
-    reader.readAsDataURL(file);
-  });
 }

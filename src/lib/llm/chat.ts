@@ -1,8 +1,8 @@
 import { getClient } from './client';
-import { chatSystemPrompt, weeklyReviewPrompt } from './prompts';
+import { replaySystemPrompt, weeklyReviewPrompt } from './prompts';
 import type { JournalEntry, UserProfile } from '../../types';
 
-interface ChatOptions {
+interface ReplayOptions {
   question: string;
   history: Array<{ role: 'user' | 'assistant'; content: string }>;
   relevantEntries: JournalEntry[];
@@ -13,7 +13,7 @@ interface ChatOptions {
   onToken: (token: string) => void;
 }
 
-export async function streamChatTurn({
+export async function streamReplayTurn({
   question,
   history,
   relevantEntries,
@@ -22,21 +22,21 @@ export async function streamChatTurn({
   baseUrl,
   model,
   onToken,
-}: ChatOptions): Promise<string> {
+}: ReplayOptions): Promise<string> {
   const client = getClient(apiKey, baseUrl);
   const isoDate = new Date().toISOString().slice(0, 10);
 
   const context = relevantEntries
-    .map((e) => {
+    .map((e: JournalEntry) => {
       const date = new Date(e.created_at).toLocaleDateString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
       });
-      return `[${e.entry_type}] ${date}${e.project ? ` · ${e.project}` : ''}\n${e.raw_text}`;
+      return `[${e.entry_type}] ${date}\n${e.raw_text}`;
     })
     .join('\n\n---\n\n');
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-    { role: 'system', content: chatSystemPrompt(profile, context, isoDate) },
+    { role: 'system', content: replaySystemPrompt(profile, context, isoDate) },
     ...history,
     { role: 'user', content: question },
   ];
@@ -86,7 +86,7 @@ export async function streamWeeklyReview({
       const date = new Date(e.created_at).toLocaleDateString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
       });
-      return `[${e.entry_type}] ${date}${e.project ? ` · ${e.project}` : ''}\n${e.raw_text}`;
+      return `[${e.entry_type}] ${date}\n${e.raw_text}`;
     })
     .join('\n\n---\n\n');
 

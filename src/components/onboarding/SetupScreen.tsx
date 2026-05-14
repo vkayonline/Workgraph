@@ -87,7 +87,7 @@ export function SetupScreen() {
           <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20 rotate-3 transition-transform hover:rotate-0" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
             <div className="w-4 h-4 bg-primary-foreground rounded-full" />
           </div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">WorkGraph</h1>
+          <h1 className="text-3xl font-black text-foreground tracking-tight">Recall</h1>
           <div className="flex items-center justify-center gap-2 mt-2">
             <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === 1 ? 'bg-primary w-12' : 'bg-border'}`} />
             <div className={`h-1 w-8 rounded-full transition-all duration-300 ${step === 2 ? 'bg-primary w-12' : 'bg-border'}`} />

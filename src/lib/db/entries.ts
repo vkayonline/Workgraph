@@ -1,5 +1,5 @@
 import { getDB } from './schema';
-import type { JournalEntry, EntryType, Priority } from '../../types';
+import type { JournalEntry, EntryType, OperationalGravity, Project, Tag, Attachment, Edge, Commitment, CommitmentStatus } from '../../types';
 
 export async function putEntry(entry: JournalEntry): Promise<void> {
   const db = await getDB();
@@ -24,16 +24,39 @@ export async function deleteEntry(id: string): Promise<void> {
   await db.delete('entries', id);
 }
 
-export async function getAllEntries(): Promise<JournalEntry[]> {
+export async function getEntriesPaginated(limit: number = 50, offset = 0): Promise<JournalEntry[]> {
   const db = await getDB();
-  const entries = await db.getAllFromIndex('entries', 'by-created_at');
-  return entries.reverse();
+  const tx = db.transaction('entries', 'readonly');
+  const index = tx.store.index('by-created_at');
+  let cursor = await index.openCursor(null, 'prev');
+  
+  const results: JournalEntry[] = [];
+  let skipped = 0;
+  
+  while (cursor && results.length < limit) {
+    if (skipped < offset) {
+      skipped++;
+      cursor = await cursor.continue();
+      continue;
+    }
+    results.push(cursor.value);
+    cursor = await cursor.continue();
+  }
+  return results;
 }
 
-export async function getEntriesByType(type: EntryType): Promise<JournalEntry[]> {
+export async function getEntriesByType(type: EntryType, limit = 50): Promise<JournalEntry[]> {
   const db = await getDB();
-  const entries = await db.getAllFromIndex('entries', 'by-entry_type', type);
-  return entries.sort((a, b) => b.created_at - a.created_at);
+  const tx = db.transaction('entries', 'readonly');
+  const index = tx.store.index('by-entry_type');
+  let cursor = await index.openCursor(IDBKeyRange.only(type), 'prev');
+  
+  const results: JournalEntry[] = [];
+  while (cursor && results.length < limit) {
+    results.push(cursor.value);
+    cursor = await cursor.continue();
+  }
+  return results.sort((a, b) => b.created_at - a.created_at);
 }
 
 export async function getEntriesInRange(from: number, to: number): Promise<JournalEntry[]> {
@@ -57,8 +80,8 @@ export async function getPendingTasks(): Promise<JournalEntry[]> {
   return tasks
     .filter((e) => !e.is_done)
     .sort((a, b) => {
-      const order: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-      return order[a.priority] - order[b.priority];
+      // Sort by operational_gravity in descending order (higher gravity = higher priority)
+      return b.operational_gravity - a.operational_gravity;
     });
 }
 
@@ -69,8 +92,8 @@ export async function getOpenIssues(): Promise<JournalEntry[]> {
 }
 
 export async function getStarredEntries(): Promise<JournalEntry[]> {
-  const all = await getAllEntries();
-  return all.filter((e) => e.starred);
+  const db = await getDB();
+  return db.getAllFromIndex('entries', 'by-starred', 1);
 }
 
 export async function toggleStar(entry: JournalEntry): Promise<JournalEntry> {
@@ -79,64 +102,145 @@ export async function toggleStar(entry: JournalEntry): Promise<JournalEntry> {
   return updated;
 }
 
-export async function getExistingProjects(): Promise<string[]> {
-  const entries = await getAllEntries();
-  const projects = new Set<string>();
-  for (const e of entries) if (e.project) projects.add(e.project);
-  return [...projects];
+// ---------------------------------------------------------
+// Normalized Entity Fetchers
+// ---------------------------------------------------------
+
+export async function putCommitment(commitment: Commitment): Promise<void> {
+  const db = await getDB();
+  await db.put('commitments', commitment);
 }
 
-export async function getTopTags(limit = 20): Promise<string[]> {
-  const entries = await getAllEntries();
-  const counts = new Map<string, number>();
-  for (const e of entries) for (const tag of e.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([tag]) => tag);
+export async function getCommitment(id: string): Promise<Commitment | undefined> {
+  const db = await getDB();
+  return db.get('commitments', id);
 }
 
-/** Full-text search: raw_text + tags + project. Returns scored results, best first. */
-export async function searchEntries(query: string): Promise<JournalEntry[]> {
+export async function getCommitmentsByStatus(status: CommitmentStatus): Promise<Commitment[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('commitments', 'by-status', status);
+}
+
+export async function deleteCommitment(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('commitments', id);
+}
+
+export async function getProjects(): Promise<Project[]> {
+  const db = await getDB();
+  return db.getAll('projects');
+}
+
+export async function getProject(id: string): Promise<Project | undefined> {
+  const db = await getDB();
+  return db.get('projects', id);
+}
+
+export async function getTagsForEntry(entryId: string): Promise<Tag[]> {
+  const db = await getDB();
+  const entryTags = await db.getAllFromIndex('entry_tags', 'by-entry', entryId);
+  const tags = await Promise.all(entryTags.map(et => db.get('tags', et.tag_id)));
+  return tags.filter(Boolean) as Tag[];
+}
+
+export async function getAttachmentsForEntry(entryId: string): Promise<Attachment[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('attachments', 'by-entry', entryId);
+}
+
+export async function getEdgesForSource(sourceId: string): Promise<Edge[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('edges', 'by-source', sourceId);
+}
+
+export async function getEdgesForTarget(targetId: string): Promise<Edge[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('edges', 'by-target', targetId);
+}
+
+export async function saveEdge(edge: Edge): Promise<void> {
+  const db = await getDB();
+  await db.put('edges', edge);
+}
+
+export async function deleteEdge(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('edges', id);
+}
+
+export async function getTopTags(limit = 20): Promise<Tag[]> {
+  const db = await getDB();
+  const allTags = await db.getAll('tags');
+  
+  // Note: For true scalability, we'd maintain a count on the tag object itself
+  // via triggers on entry_tags insertion. For now, we do an IDB count.
+  const tagsWithCount = await Promise.all(allTags.map(async (tag) => {
+    const count = await db.countFromIndex('entry_tags', 'by-tag', tag.id);
+    return { tag, count };
+  }));
+  
+  return tagsWithCount
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map(t => t.tag);
+}
+
+export async function searchEntries(query: string, limit = 50): Promise<JournalEntry[]> {
   if (!query.trim()) return [];
   const q = query.toLowerCase().trim();
   const terms = q.split(/\s+/);
-  const all = await getAllEntries();
-  return all
-    .map((e) => {
-      const haystack = [
-        e.raw_text,
-        ...e.tags,
-        e.project ?? '',
-        e.entry_type.replace('_', ' '),
-      ].join(' ').toLowerCase();
-      const score = terms.reduce((s, t) => {
-        const occurrences = (haystack.match(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) ?? []).length;
-        return s + occurrences;
-      }, 0);
-      return { entry: e, score };
-    })
-    .filter(({ score }) => score > 0)
+  
+  // Simple client-side search without pulling the entire DB at once.
+  // We stream through the DB until we hit our limit.
+  const db = await getDB();
+  const tx = db.transaction('entries', 'readonly');
+  const store = tx.objectStore('entries');
+  let cursor = await store.index('by-created_at').openCursor(null, 'prev');
+  
+  const results: { entry: JournalEntry, score: number }[] = [];
+  
+  while (cursor && results.length < limit * 2) { // Fetch slightly more to sort
+    const e = cursor.value;
+    const haystack = [
+      e.raw_text,
+      e.entry_type.replace('_', ' '),
+    ].join(' ').toLowerCase();
+    
+    let score = 0;
+    let matchesAll = true;
+    
+    for (const term of terms) {
+      const occurrences = (haystack.match(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) ?? []).length;
+      if (occurrences === 0) {
+        matchesAll = false;
+        break;
+      }
+      score += occurrences;
+    }
+    
+    if (matchesAll && score > 0) {
+      results.push({ entry: e, score });
+    }
+    cursor = await cursor.continue();
+  }
+  
+  return results
     .sort((a, b) => b.score - a.score)
-    .map(({ entry }) => entry);
-}
-
-/** Get all entries that link TO a given entry id (backlinks). */
-export async function getBacklinks(id: string): Promise<JournalEntry[]> {
-  const all = await getAllEntries();
-  return all.filter((e) => e.links?.includes(id));
+    .slice(0, limit)
+    .map(r => r.entry);
 }
 
 export async function clearAllEntries(): Promise<void> {
   const db = await getDB();
-  await db.clear('entries');
-}
-
-export async function importEntries(entries: JournalEntry[]): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction('entries', 'readwrite');
-  // Ensure imported entries have v2 fields
-  const normalized = entries.map((e) => ({
-    ...e,
-    links: e.links ?? [],
-    starred: e.starred ?? false,
-  }));
-  await Promise.all([...normalized.map((e) => tx.store.put(e)), tx.done]);
+  const tx = db.transaction(['entries', 'sessions', 'edges', 'projects', 'tags', 'entry_tags', 'attachments'], 'readwrite');
+  await Promise.all([
+    tx.objectStore('entries').clear(),
+    tx.objectStore('sessions').clear(),
+    tx.objectStore('edges').clear(),
+    tx.objectStore('projects').clear(),
+    tx.objectStore('tags').clear(),
+    tx.objectStore('entry_tags').clear(),
+    tx.objectStore('attachments').clear(),
+    tx.done
+  ]);
 }

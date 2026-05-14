@@ -1,7 +1,7 @@
 import { getClient } from './client';
 import { classifySystemPrompt } from './prompts';
-import type { ClassificationResult, EntryImage, UserProfile } from '../../types';
-import { ENTRY_TYPES, PRIORITIES } from '../../types';
+import type { ClassificationResult, UserProfile, OperationalGravity } from '../../types';
+import { ENTRY_TYPES } from '../../types';
 
 const CLASSIFY_TOOL = {
   type: 'function' as const,
@@ -14,9 +14,9 @@ const CLASSIFY_TOOL = {
         entry_type: { type: 'string', enum: [...ENTRY_TYPES] },
         tags: { type: 'array', items: { type: 'string' }, maxItems: 5 },
         project: { type: ['string', 'null'] },
-        priority: { type: 'string', enum: [...PRIORITIES] },
+        operational_gravity: { type: 'number', minimum: 0, maximum: 1 },
       },
-      required: ['entry_type', 'tags', 'project', 'priority'],
+      required: ['entry_type', 'tags', 'project', 'operational_gravity'],
       additionalProperties: false,
     },
   },
@@ -24,7 +24,6 @@ const CLASSIFY_TOOL = {
 
 interface ClassifyOptions {
   text: string;
-  images: EntryImage[];
   profile: UserProfile;
   apiKey: string;
   baseUrl: string;
@@ -35,7 +34,6 @@ interface ClassifyOptions {
 
 export async function classifyEntry({
   text,
-  images,
   profile,
   apiKey,
   baseUrl,
@@ -51,9 +49,6 @@ export async function classifyEntry({
 
   const content: ContentPart[] = [];
   if (text.trim()) content.push({ type: 'text', text: text.trim() });
-  for (const img of images) {
-    content.push({ type: 'image_url', image_url: { url: img.data_url } });
-  }
 
   const resp = await client.chat.completions.create({
     model,
@@ -74,6 +69,6 @@ export async function classifyEntry({
     entry_type: ENTRY_TYPES.includes(parsed.entry_type) ? parsed.entry_type : 'work_log',
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
     project: typeof parsed.project === 'string' && parsed.project ? parsed.project : null,
-    priority: PRIORITIES.includes(parsed.priority) ? parsed.priority : 'medium',
+    operational_gravity: typeof parsed.operational_gravity === 'number' ? parsed.operational_gravity : 0.5,
   };
 }

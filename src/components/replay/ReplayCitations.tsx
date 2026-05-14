@@ -8,7 +8,7 @@ interface SourceCitationsProps {
   onSelect?: (entry: JournalEntry) => void;
 }
 
-export function SourceCitations({ entries, onSelect }: SourceCitationsProps) {
+export function ReplayCitations({ entries, onSelect }: SourceCitationsProps) {
   const [open, setOpen] = useState(false);
 
   if (entries.length === 0) return null;
@@ -41,9 +41,6 @@ export function SourceCitations({ entries, onSelect }: SourceCitationsProps) {
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <EntryTypeBadge type={e.entry_type} />
-                    {e.project && (
-                      <span className="text-muted-foreground">{e.project}</span>
-                    )}
                     <span className="text-muted-foreground ml-auto">{date}</span>
                   </div>
                   {preview && (

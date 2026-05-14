@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Settings, Theme } from '../types';
 
-const STORAGE_KEY = 'workgraph:settings';
+const STORAGE_KEY = 'recall:settings';
 
 const DEFAULT_SETTINGS: Settings = {
   userProfile: { name: '', dayToDay: '' },

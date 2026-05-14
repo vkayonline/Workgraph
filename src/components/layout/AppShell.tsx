@@ -6,11 +6,12 @@ import { TopBar } from './TopBar';
 import { NetworkIndicator } from '../shared/NetworkIndicator';
 import { CaptureModal } from '../capture/CaptureModal';
 import { SettingsModal } from '../settings/SettingsModal';
+import { CommandPalette } from '../shared/CommandPalette';
 import { BackgroundProcessor } from '../shared/BackgroundProcessor';
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
-import { FOCUS_CHAT_INPUT_EVENT } from '../chat/ChatPage';
+import { FOCUS_REPLAY_INPUT_EVENT } from '../replay/ReplayPage';
 
-const NAV_ROUTES = ['/', '/entries', '/decisions', '/chat', '/calendar', '/graph', '/insights'] as const;
+const NAV_ROUTES = ['/', '/entries', '/replay'] as const;
 
 function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(
@@ -34,23 +35,42 @@ function isInputFocused(): boolean {
 
 export function AppShell() {
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureType, setCaptureType] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
 
-  // Cmd+/ — jump to chat and focus its input (fires even from inputs)
-  const goToChat = useCallback(() => {
-    navigate('/chat');
-    setTimeout(() => window.dispatchEvent(new CustomEvent(FOCUS_CHAT_INPUT_EVENT)), 50);
-  }, [navigate]);
-  useKeyboardShortcut({ key: '/', meta: true, onTrigger: goToChat });
+  // Cmd+K — open command palette
+  useKeyboardShortcut({ 
+    key: 'k', 
+    meta: true, 
+    onTrigger: () => setCommandPaletteOpen(prev => !prev) 
+  });
 
-  // Cmd+1–4 — navigate to Today / Entries / Decisions / Chat
+  // Cmd+/ — jump to chat and focus its input (fires even from inputs)
+  const goToReplay = useCallback(() => {
+    navigate('/replay');
+    setTimeout(() => window.dispatchEvent(new CustomEvent(FOCUS_REPLAY_INPUT_EVENT)), 50);
+  }, [navigate]);
+  useKeyboardShortcut({ key: '/', meta: true, onTrigger: goToReplay });
+
+  // Handle custom events for opening capture with specific types
+  useEffect(() => {
+    const handler = (e: any) => {
+      setCaptureType(e.detail?.type || null);
+      setCaptureOpen(true);
+    };
+    window.addEventListener('workgraph:open-capture', handler);
+    return () => window.removeEventListener('workgraph:open-capture', handler);
+  }, []);
+
+  // Cmd+1-3 — navigate to Today / Entries / Chat
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.metaKey && !e.ctrlKey) return;
-      if (isInputFocused()) return;
-      const idx = ['1', '2', '3', '4', '5', '6', '7'].indexOf(e.key);
+      if (isInputFocused() && e.key !== 'k') return;
+      const idx = ['1', '2', '3'].indexOf(e.key);
       if (idx === -1) return;
       e.preventDefault();
       navigate(NAV_ROUTES[idx]);
@@ -60,15 +80,13 @@ export function AppShell() {
   }, [navigate]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       {isDesktop ? (
         <>
           <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
             <TopBar 
-              onCapture={() => setCaptureOpen(true)} 
-              onOpenSettings={() => setSettingsOpen(true)}
-              showCaptureButton 
+              onOpenSettings={() => setSettingsOpen(true)}              showCaptureButton 
             />
             <main className="flex-1 overflow-y-auto p-6 bg-faint">
               <Outlet />
@@ -78,19 +96,19 @@ export function AppShell() {
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopBar 
-            onCapture={() => setCaptureOpen(true)} 
             onOpenSettings={() => setSettingsOpen(true)}
           />
           <main className="flex-1 overflow-y-auto p-4 bg-faint">
             <Outlet />
           </main>
-          <BottomNav onCapture={() => setCaptureOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+          <BottomNav onCapture={() => { setCaptureType(null); setCaptureOpen(true); }} onOpenSettings={() => setSettingsOpen(true)} />
         </div>
       )}
 
       <NetworkIndicator />
       <BackgroundProcessor />
-      <CaptureModal open={captureOpen} onClose={() => setCaptureOpen(false)} />
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <CaptureModal open={captureOpen} onClose={() => setCaptureOpen(false)} initialType={captureType} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );

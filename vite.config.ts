@@ -12,8 +12,8 @@ export default defineConfig({
       injectRegister: 'inline',
       includeAssets: ['favicon.svg', 'icons/pwa-192x192.png', 'icons/pwa-512x512.png'],
       manifest: {
-        name: 'WorkGraph',
-        short_name: 'WorkGraph',
+        name: 'Recall',
+        short_name: 'Recall',
         description: 'Private local-first work journal',
         theme_color: '#6366f1',
         background_color: '#ffffff',

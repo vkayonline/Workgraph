@@ -11,13 +11,7 @@ interface NavItem {
 const CORE_NAV: NavItem[] = [
   { to: '/',           emoji: '🏠', label: 'Today' },
   { to: '/entries',    emoji: '📝', label: 'Entries' },
-  { to: '/decisions',  emoji: '⚖️',  label: 'Decisions' },
-  { to: '/chat',       emoji: '💬', label: 'Chat' },
-];
-
-const VIEW_NAV: NavItem[] = [
-  { to: '/calendar',   emoji: '📅', label: 'Calendar' },
-  { to: '/insights',   emoji: '📊', label: 'Insights' },
+  { to: '/replay',     emoji: '💬', label: 'Replay' },
 ];
 
 function NavItemLink({ to, emoji, label, collapsed }: NavItem & { collapsed: boolean }) {
@@ -62,12 +56,12 @@ export function Sidebar() {
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2.5 text-foreground font-bold text-sm hover:opacity-80 transition-opacity min-w-0"
-          aria-label="WorkGraph home"
+          aria-label="Recall home"
         >
           <div className="w-6 h-6 bg-primary rounded-[4px] flex items-center justify-center shrink-0" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
             <div className="w-2 h-2 bg-primary-foreground rounded-full" />
           </div>
-          {!collapsed && <span className="truncate tracking-tight">WorkGraph</span>}
+          {!collapsed && <span className="truncate tracking-tight">Recall</span>}
         </button>
         {!collapsed && (
           <button
@@ -95,20 +89,6 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto py-2 px-2 flex flex-col gap-0.5">
         {/* Core nav */}
         {CORE_NAV.map((item) => (
-          <NavItemLink key={item.to} {...item} collapsed={collapsed} />
-        ))}
-
-        {/* Views section */}
-        <div className="mt-3 mb-1">
-          {!collapsed && (
-            <p className="px-2 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 mb-1">
-              Views
-            </p>
-          )}
-          {collapsed && <div className="border-t border-border/50 mx-1 my-1" />}
-        </div>
-
-        {VIEW_NAV.map((item) => (
           <NavItemLink key={item.to} {...item} collapsed={collapsed} />
         ))}
       </div>

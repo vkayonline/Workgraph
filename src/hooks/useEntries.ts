@@ -6,19 +6,37 @@ import type { JournalEntry } from '../types';
  * Hook for managing the collection of journal entries.
  * Listens for repository events to keep the local state synchronized.
  */
-export function useEntries() {
+export function useEntries(initialLimit: number = 50) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
 
-  const refresh = useCallback(async () => {
+  const fetchEntries = useCallback(async (currentOffset: number, append: boolean = false) => {
     setLoading(true);
     try {
-      const all = await JournalRepository.getAll();
-      setEntries(all);
+      const results = await JournalRepository.getPaginated(initialLimit, currentOffset);
+      if (results.length < initialLimit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+      setEntries(prev => append ? [...prev, ...results] : results);
+      setOffset(currentOffset + results.length);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialLimit]);
+
+  const refresh = useCallback(() => {
+    return fetchEntries(0, false);
+  }, [fetchEntries]);
+
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      return fetchEntries(offset, true);
+    }
+  }, [loading, hasMore, offset, fetchEntries]);
 
   useEffect(() => {
     refresh();
@@ -41,5 +59,5 @@ export function useEntries() {
     await JournalRepository.delete(id);
   }, []);
 
-  return { entries, loading, refresh, update, remove };
+  return { entries, loading, hasMore, loadMore, refresh, update, remove };
 }

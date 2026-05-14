@@ -347,7 +347,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                           alert('Import successful!');
                           window.location.reload();
                         } catch {
-                          setError('Failed to import data. Ensure the file is a valid WorkGraph export.');
+                          setError('Failed to import data. Ensure the file is a valid Recall export.');
                         }
                       }}
                     />

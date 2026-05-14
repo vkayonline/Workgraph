@@ -2,12 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { JournalRepository } from '../../lib/db/repository';
-import { streamChatTurn } from '../../lib/llm/chat';
+import { streamReplayTurn } from '../../lib/llm/chat';
 import { embedText } from '../../lib/llm/embed';
 import { topK } from '../../lib/search/cosine';
 import { Spinner } from '../shared/Spinner';
 import { ErrorBanner } from '../shared/ErrorBanner';
-import { SourceCitations } from './SourceCitations';
+import { ReplayCitations } from './ReplayCitations';
 import { EntryDetail } from '../entries/EntryDetail';
 import type { ChatMessage, JournalEntry } from '../../types';
 
@@ -18,9 +18,9 @@ const EXAMPLES = [
 ];
 
 // Custom event name used by AppShell Cmd+/ shortcut to focus this textarea
-export const FOCUS_CHAT_INPUT_EVENT = 'workgraph:focus-chat-input';
+export const FOCUS_REPLAY_INPUT_EVENT = 'recall:focus-replay-input';
 
-export function ChatPage() {
+export function ReplayPage() {
   const { settings } = useSettingsContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   // Map from message id → relevant entries shown as citations
@@ -39,8 +39,8 @@ export function ChatPage() {
   // Focus input when Cmd+/ fires from anywhere in the app
   useEffect(() => {
     const handler = () => inputRef.current?.focus();
-    window.addEventListener(FOCUS_CHAT_INPUT_EVENT, handler);
-    return () => window.removeEventListener(FOCUS_CHAT_INPUT_EVENT, handler);
+    window.addEventListener(FOCUS_REPLAY_INPUT_EVENT, handler);
+    return () => window.removeEventListener(FOCUS_REPLAY_INPUT_EVENT, handler);
   }, []);
 
   const send = useCallback(async (question: string) => {
@@ -64,7 +64,7 @@ export function ChatPage() {
     setStreaming(true);
 
     try {
-      const allEntries = await JournalRepository.getAll();
+      const allEntries = await JournalRepository.getPaginated(99999, 0);
       const relevant = await pickRelevant(allEntries, question);
 
       // Attach citations immediately so they appear as soon as streaming starts
@@ -81,7 +81,7 @@ export function ChatPage() {
 
       const history = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
 
-      await streamChatTurn({
+      await streamReplayTurn({
         question: question.trim(),
         history,
         relevantEntries: relevant,
@@ -89,14 +89,14 @@ export function ChatPage() {
         apiKey: settings.apiKey,
         baseUrl: settings.baseUrl,
         model: settings.model,
-        onToken: (token) => {
+        onToken: (token: string) => {
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + token } : m))
           );
         },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chat failed. Check your API key.');
+      setError(err instanceof Error ? err.message : 'Replay failed. Check your API key.');
       setMessages((prev) => prev.filter((m) => m.id !== assistantId));
       setCitations((prev) => { const next = new Map(prev); next.delete(assistantId); return next; });
     } finally {
@@ -125,14 +125,14 @@ export function ChatPage() {
     <>
     <div className="max-w-2xl mx-auto flex flex-col gap-0" style={{ height: 'calc(100dvh - 8rem)' }}>
       <h1 className="text-xl font-semibold text-foreground mb-4 shrink-0">
-        Chat with your journal
+        Replay your operational memory
       </h1>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-1 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col gap-3 mt-8">
             <p className="text-sm text-muted-foreground text-center">
-              Ask anything about your work journal
+              Replay any operational context
             </p>
             <div className="flex flex-col gap-2">
               {EXAMPLES.map((ex) => (
@@ -167,7 +167,7 @@ export function ChatPage() {
             </div>
             {msg.role === 'assistant' && citations.has(msg.id) && (
               <div className="max-w-[80%] w-full px-1">
-                <SourceCitations entries={citations.get(msg.id)!} onSelect={setSelected} />
+                <ReplayCitations entries={citations.get(msg.id)!} onSelect={setSelected} />
               </div>
             )}
           </div>
@@ -188,7 +188,7 @@ export function ChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask anything… (Cmd+Enter to send)"
+          placeholder="Replay your memory… (Cmd+Enter to send)"
           rows={2}
           className="flex-1 px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground resize-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0 font-mono"
         />
@@ -238,8 +238,6 @@ async function pickRelevant(
     let score = 0;
     const haystack = [
       e.raw_text,
-      ...e.tags,
-      e.project ?? '',
       e.entry_type.replace('_', ' '),
     ].join(' ').toLowerCase();
 

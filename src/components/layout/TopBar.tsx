@@ -1,17 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Settings, Sun, Moon, Monitor } from 'lucide-react';
-import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
+import { Sun, Moon, Monitor, Search as SearchIcon, Settings as SettingsIcon } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import type { Theme } from '../../types';
 
 const ROUTE_LABELS: Record<string, { emoji: string; label: string }> = {
   '/':          { emoji: '🏠', label: 'Today' },
-  '/entries':   { emoji: '📝', label: 'Entries' },
-  '/decisions': { emoji: '⚖️',  label: 'Decisions' },
-  '/chat':      { emoji: '💬', label: 'Chat' },
-  '/calendar':  { emoji: '📅', label: 'Calendar' },
-  '/insights':  { emoji: '📊', label: 'Insights' },
+  '/entries':   { emoji: '📝', label: 'Timeline' },
+  '/replay':    { emoji: '💬', label: 'Replay' },
 };
 
 const THEME_OPTIONS: { theme: Theme; label: string; Icon: typeof Sun }[] = [
@@ -21,18 +17,17 @@ const THEME_OPTIONS: { theme: Theme; label: string; Icon: typeof Sun }[] = [
 ];
 
 interface TopBarProps {
-  onCapture: () => void;
   onOpenSettings: () => void;
   showCaptureButton?: boolean;
 }
 
-export function TopBar({ onCapture, onOpenSettings, showCaptureButton = false }: TopBarProps) {
+export function TopBar({ onOpenSettings, showCaptureButton = false }: TopBarProps) {
   const { pathname } = useLocation();
   const { settings, update } = useSettingsContext();
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useKeyboardShortcut({ key: 'k', meta: true, onTrigger: onCapture });
+  // Cmd+K is handled in AppShell for the Command Palette
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -68,12 +63,12 @@ export function TopBar({ onCapture, onOpenSettings, showCaptureButton = false }:
       <div className="flex items-center gap-1 shrink-0">
         {showCaptureButton && (
           <button
-            onClick={onCapture}
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
             className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-md px-2.5 py-1.5 hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Quick capture (Cmd+K)"
+            aria-label="Command Palette (Cmd+K)"
           >
-            <Plus size={14} />
-            <span>New</span>
+            <SearchIcon size={14} />
+            <span>Command</span>
             <kbd className="text-[10px] bg-secondary px-1 py-0.5 rounded font-mono leading-none">⌘K</kbd>
           </button>
         )}
@@ -107,7 +102,7 @@ export function TopBar({ onCapture, onOpenSettings, showCaptureButton = false }:
           className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
           aria-label="Settings"
         >
-          <Settings size={16} />
+          <SettingsIcon size={16} />
         </button>
       </div>
     </header>

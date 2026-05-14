@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Flame } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { JournalRepository, DATA_EVENTS } from '../../lib/db/repository';
-import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { EntryCard } from '../entries/EntryCard';
 import { EntryDetail } from '../entries/EntryDetail';
 import { EmptyState } from '../shared/EmptyState';
@@ -25,7 +23,6 @@ function todayLabel(): string {
 
 export function HomePage() {
   const { settings } = useSettingsContext();
-  const { currentStreak, entriesThisWeek } = useDashboardStats();
   const [todayEntries, setTodayEntries] = useState<JournalEntry[]>([]);
   const [tasks, setTasks] = useState<JournalEntry[]>([]);
   const [issues, setIssues] = useState<JournalEntry[]>([]);
@@ -67,31 +64,14 @@ export function HomePage() {
   return (
     <>
       <div className="max-w-2xl mx-auto flex flex-col gap-8 min-h-full relative pb-10">
-        {/* Greeting & Streak Hero */}
+        {/* Greeting Hero */}
         <div className="relative overflow-hidden bg-primary/5 border border-primary/10 rounded-2xl p-6 flex items-start justify-between gap-4">
           <div className="relative z-10">
             <p className="text-primary/60 text-xs font-bold uppercase tracking-widest mb-1">{todayLabel()}</p>
             <h1 className="text-2xl font-semibold text-foreground tracking-tight">
               {greeting(settings.userProfile.name)}
             </h1>
-            {entriesThisWeek > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                You've captured <span className="text-foreground font-medium">{entriesThisWeek} {entriesThisWeek === 1 ? 'entry' : 'entries'}</span> this week.
-              </p>
-            )}
           </div>
-          
-          {currentStreak > 0 && (
-            <div className="relative z-10 flex flex-col items-end shrink-0">
-              <div className="flex items-center gap-1.5 text-warning font-bold text-2xl">
-                <Flame size={24} fill="currentColor" />
-                {currentStreak}
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
-                Streak
-              </p>
-            </div>
-          )}
           
           {/* Decorative background element */}
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />

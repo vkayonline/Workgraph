@@ -19,9 +19,12 @@
     "openai": "^6.37.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-markdown": "^10.1.0",
+    "react-markdown": "^9.0.1",
     "react-router-dom": "^7.15.0",
     "recharts": "^3.8.1",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.0",
+    "highlight.js": "^11.9.0",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

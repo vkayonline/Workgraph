@@ -1,4 +1,4 @@
-# WorkGraph — AI Operational Context
+# Recall — AI Operational Context
 
 This repository is managed by Gemini CLI. This file contains foundational mandates, architecture rules, and conventions for the project.
 

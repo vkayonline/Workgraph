@@ -5,10 +5,7 @@ import { SetupScreen } from './components/onboarding/SetupScreen';
 import { AppShell } from './components/layout/AppShell';
 import { HomePage } from './components/home/HomePage';
 import { EntryListPage } from './components/entries/EntryListPage';
-import { DecisionsPage } from './components/decisions/DecisionsPage';
-import { ChatPage } from './components/chat/ChatPage';
-import { CalendarPage } from './components/calendar/CalendarPage';
-import { InsightsPage } from './components/insights/InsightsPage';
+import { ReplayPage } from './components/replay/ReplayPage';
 
 function AppRoutes() {
   const { onboarded } = useSettingsContext();
@@ -18,10 +15,7 @@ function AppRoutes() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="entries" element={<EntryListPage />} />
-        <Route path="decisions" element={<DecisionsPage />} />
-        <Route path="chat" element={<ChatPage />} />
-        <Route path="calendar" element={<CalendarPage />} />
-        <Route path="insights" element={<InsightsPage />} />
+        <Route path="replay" element={<ReplayPage />} />
       </Route>
     </Routes>
   );

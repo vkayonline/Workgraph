@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
-import { X, Pencil, Trash2, Check, Star, Link2, ExternalLink } from 'lucide-react';
+import { X, Pencil, Trash2, Check, Star, Link2, ExternalLink, Plus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css'; // Or any other theme
+
 import { EntryTypeBadge } from './EntryTypeBadge';
 import { PriorityDot } from '../shared/PriorityDot';
 import { Button } from '../shared/Button';
-import { getEntry, getBacklinks, searchEntries } from '../../lib/db/entries';
+import { getEntry, searchEntries, getEdgesForSource, getEdgesForTarget, saveEdge, deleteEdge } from '../../lib/db/entries';
 import { JournalRepository } from '../../lib/db/repository';
-import type { JournalEntry } from '../../types';
+import type { JournalEntry, Edge } from '../../types';
 
 interface EntryDetailProps {
   entry: JournalEntry;
@@ -43,15 +48,22 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
     setEditText(entry.raw_text);
     setEditDuration(entry.duration_minutes != null ? String(entry.duration_minutes) : '');
   }, [entry]);
+  
+  // Syntax highlighting for code blocks
+  useEffect(() => {
+    hljs.highlightAll();
+  }, [editText]); // Re-highlight when markdown content changes
 
   useEffect(() => {
     async function loadRefs() {
+      const outEdges = await getEdgesForSource(entry.id);
+      const inEdges = await getEdgesForTarget(entry.id);
       const [linked, bl] = await Promise.all([
-        Promise.all((entry.links ?? []).map((id) => getEntry(id))),
-        getBacklinks(entry.id),
+        Promise.all(outEdges.map((e) => getEntry(e.target_id))),
+        Promise.all(inEdges.map((e) => getEntry(e.source_id))),
       ]);
       setLinkedEntries(linked.filter(Boolean) as JournalEntry[]);
-      setBacklinks(bl);
+      setBacklinks(bl.filter(Boolean) as JournalEntry[]);
     }
     loadRefs();
   }, [entry]);
@@ -100,20 +112,27 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
   }
 
   async function handleAddLink(target: JournalEntry) {
-    if (entry.links?.includes(target.id)) return;
-    const updated = { ...entry, links: [...(entry.links ?? []), target.id] };
-    await JournalRepository.save(updated);
-    onUpdate(updated);
+    if (linkedEntries.some(e => e.id === target.id)) return;
+    const edge: Edge = {
+      id: crypto.randomUUID(),
+      source_id: entry.id,
+      target_id: target.id,
+      edge_type: 'references',
+      timestamp: Date.now()
+    };
+    await saveEdge(edge);
     setLinkedEntries((prev) => [...prev, target]);
     setLinkQuery('');
     setLinkResults([]);
   }
 
   async function handleRemoveLink(targetId: string) {
-    const updated = { ...entry, links: (entry.links ?? []).filter((id) => id !== targetId) };
-    await JournalRepository.save(updated);
-    onUpdate(updated);
-    setLinkedEntries((prev) => prev.filter((e) => e.id !== targetId));
+    const outEdges = await getEdgesForSource(entry.id);
+    const edge = outEdges.find((e: Edge) => e.target_id === targetId);
+    if (edge) {
+      await deleteEdge(edge.id);
+      setLinkedEntries((prev) => prev.filter((e) => e.id !== targetId));
+    }
   }
 
   const navigate = onNavigate ?? onClose;
@@ -137,7 +156,7 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
             ) : (
               <EntryTypeBadge type={entry.entry_type} />
             )}
-            <PriorityDot priority={entry.priority} showLabel />
+            <PriorityDot gravity={entry.operational_gravity} showLabel />
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -164,12 +183,8 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
         <div className="px-5 pt-3 pb-2 shrink-0">
           <p className="text-xs text-muted-foreground">
             {formatDate(entry.created_at)}
-            {entry.project && <span> · {entry.project}</span>}
             {entry.duration_minutes != null && <span> · {entry.duration_minutes}m</span>}
           </p>
-          {entry.tags.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">{entry.tags.map((t) => `#${t}`).join(' ')}</p>
-          )}
         </div>
 
         {/* Body */}
@@ -196,96 +211,119 @@ export function EntryDetail({ entry, onClose, onUpdate, onDelete, onNavigate }: 
                   />
                 </div>
               )}
-              {/* Link search in edit mode */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Link2 size={11} /> Link entries
-                </label>
-                <input
-                  value={linkQuery}
-                  onChange={(e) => setLinkQuery(e.target.value)}
-                  placeholder="Search entries to link…"
-                  className="px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-0"
-                />
-                {linkResults.length > 0 && (
-                  <ul className="border border-border rounded-md divide-y divide-border overflow-hidden">
-                    {linkResults.map((r) => (
-                      <li key={r.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleAddLink(r)}
-                          disabled={entry.links?.includes(r.id)}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors disabled:opacity-40"
-                        >
-                          <span className="font-medium">{r.entry_type.replace('_', ' ')}</span>
-                          {' · '}
-                          {r.raw_text.replace(/[#*_`]/g, '').slice(0, 60)}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
             </div>
           ) : (
-            <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
-              <ReactMarkdown>{entry.raw_text}</ReactMarkdown>
-            </div>
-          )}
+            <>
+              <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeSanitize]}
+                  components={{
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match ? (
+                        <pre className="relative rounded-md my-2">
+                          <code className={`language-${match[1]}`} {...props}>
+                            {children}
+                          </code>
+                        </pre>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                >{entry.raw_text}</ReactMarkdown>
+              </div>
 
-          {entry.images.length > 0 && !editing && (
-            <div className="flex flex-wrap gap-3">
-              {entry.images.map((img) => (
-                <img key={img.id} src={img.data_url} alt={img.file_name}
-                  className="max-h-48 rounded-md border border-border object-cover" />
-              ))}
-            </div>
+              {/* Quick Link Search (always available when not editing) */}
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Link2 size={12} /> Connect Memory
+                  </label>
+                </div>
+                <div className="relative">
+                  <input
+                    value={linkQuery}
+                    onChange={(e) => setLinkQuery(e.target.value)}
+                    placeholder="Search memories to link..."
+                    className="w-full px-3 py-1.5 text-xs bg-muted/30 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                  />
+                  {linkResults.length > 0 && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-20 animate-in slide-in-from-bottom-2 duration-200">
+                      <ul className="divide-y divide-border">
+                        {linkResults.map((r) => (
+                          <li key={r.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleAddLink(r)}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-primary/5 transition-colors group flex items-center gap-2"
+                            >
+                              <EntryTypeBadge type={r.entry_type} />
+                              <span className="flex-1 truncate group-hover:text-primary">{r.raw_text.replace(/[#*_`]/g, '').slice(0, 60)}</span>
+                              <Plus size={12} className="text-muted-foreground group-hover:text-primary" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           {/* Linked entries */}
           {(linkedEntries.length > 0 || backlinks.length > 0) && !editing && (
-            <div className="flex flex-col gap-3 pt-2 border-t border-border">
+            <div className="flex flex-col gap-4 pt-4 border-t border-border mt-2">
               {linkedEntries.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <Link2 size={11} /> Linked
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Link2 size={12} /> Explicit Connections
                   </p>
-                  <ul className="flex flex-col gap-1">
+                  <div className="space-y-1">
                     {linkedEntries.map((l) => (
-                      <li key={l.id} className="flex items-center gap-2 text-xs text-foreground">
+                      <div key={l.id} className="group flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-all">
                         <button
                           onClick={() => navigate(l)}
-                          className="flex-1 text-left hover:underline truncate"
+                          className="flex-1 text-left flex items-center gap-2 min-w-0"
                         >
                           <EntryTypeBadge type={l.entry_type} />
-                          <span className="ml-2">{l.raw_text.replace(/[#*_`]/g, '').slice(0, 60)}</span>
+                          <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors">
+                            {l.raw_text.replace(/[#*_`]/g, '').slice(0, 80)}
+                          </span>
                         </button>
                         <button onClick={() => handleRemoveLink(l.id)}
-                          className="text-muted-foreground hover:text-danger transition-colors shrink-0"
+                          className="text-muted-foreground hover:text-danger opacity-0 group-hover:opacity-100 transition-all p-1"
                           aria-label="Remove link">
-                          <X size={12} />
+                          <Trash2 size={12} />
                         </button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               {backlinks.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <ExternalLink size={11} /> Referenced by
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <ExternalLink size={12} /> Referenced by
                   </p>
-                  <ul className="flex flex-col gap-1">
+                  <div className="space-y-1">
                     {backlinks.map((b) => (
-                      <li key={b.id}>
-                        <button onClick={() => navigate(b)}
-                          className="text-xs text-left hover:underline text-foreground truncate w-full">
-                          <EntryTypeBadge type={b.entry_type} />
-                          <span className="ml-2">{b.raw_text.replace(/[#*_`]/g, '').slice(0, 60)}</span>
-                        </button>
-                      </li>
+                      <button 
+                        key={b.id}
+                        onClick={() => navigate(b)}
+                        className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-all group"
+                      >
+                        <EntryTypeBadge type={b.entry_type} />
+                        <span className="text-xs text-foreground truncate group-hover:text-primary transition-colors text-left">
+                          {b.raw_text.replace(/[#*_`]/g, '').slice(0, 80)}
+                        </span>
+                      </button>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>
